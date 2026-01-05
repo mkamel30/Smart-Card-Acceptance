@@ -122,7 +122,8 @@ export class AnalyticsService {
                     include: {
                         branch: {
                             select: { name: true, code: true }
-                        }
+                        },
+                        receipt: true
                     },
                     orderBy: {
                         settlementDate: 'desc'

@@ -119,6 +119,14 @@ export default function BranchDashboard() {
         }
     };
 
+    const getReceiptUrl = (tx: any) => {
+        const path = tx.receipt?.imageUrl || tx.receiptImageUrl;
+        if (!path) return null;
+        const cleanPath = path.replace(/\\/g, '/');
+        if (cleanPath.startsWith('http')) return cleanPath;
+        return cleanPath.startsWith('/') ? `/api${cleanPath}` : `/api/${cleanPath}`;
+    };
+
     // Transactions State
     const [transactions, setTransactions] = useState<any[]>([]);
     const [page, setPage] = useState(1);
@@ -512,17 +520,17 @@ export default function BranchDashboard() {
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${tx.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                                tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                                                    tx.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                                                        'bg-blue-100 text-blue-700'
+                                            tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                                                tx.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                                    'bg-blue-100 text-blue-700'
                                             }`}>
                                             {tx.status}
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">
-                                        {tx.receiptImageUrl ? (
+                                        {getReceiptUrl(tx) ? (
                                             <button
-                                                onClick={() => setViewImage(tx.receiptImageUrl)}
+                                                onClick={() => setViewImage(getReceiptUrl(tx))}
                                                 className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-primary transition-colors mx-auto"
                                                 title="عرض الصورة"
                                             >
