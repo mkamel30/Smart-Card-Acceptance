@@ -54,7 +54,7 @@ export class OCRService {
         return urlData.data.publicUrl;
     }
 
-    async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string }> {
+    async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string; engine: string }> {
 
         let ocrBuffer = file.buffer;
         let storageBuffer = file.buffer;
