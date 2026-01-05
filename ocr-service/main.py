@@ -40,8 +40,8 @@ def parse_receipt(text_lines: list) -> dict:
     full_text = '\n'.join(text_lines)
     data = {}
     
-    # 1. Merchant Code (MID) - 15 digits
-    mid_match = re.search(r'(?:MID|Merchant|Merch|ID)[:\s]*(\d{12,15})', full_text, re.I)
+    # 1. Merchant Code (MID) - 8-15 digits
+    mid_match = re.search(r'(?:MID|Merchant|Merch|ID)[:\s]*(\d{8,15})', full_text, re.I)
     if mid_match: data['merchantCode'] = mid_match.group(1)
     
     # 2. Terminal ID (TID) - 8 digits
@@ -49,11 +49,11 @@ def parse_receipt(text_lines: list) -> dict:
     if tid_match: data['terminalId'] = tid_match.group(1)
     
     # 3. Batch Number
-    batch_match = re.search(r'(?:Batch|الباتش)[:\s]*(\d{1,6})', full_text, re.I)
+    batch_match = re.search(r'(?:Batch|الباتش)\s*(?:NO|#)?[:\s]*(\d{1,6})', full_text, re.I)
     if batch_match: data['batchNumber'] = batch_match.group(1)
     
     # 4. Approval Number
-    auth_match = re.search(r'(?:Auth|Approval|Appr|الموافقة)[:\s]*(\d{6})', full_text, re.I)
+    auth_match = re.search(r'(?:Auth|Approval|Appr|الموافقة)\s*(?:CODE|NO)?[:\s]*(\d{6})', full_text, re.I)
     if auth_match: data['approvalNumber'] = auth_match.group(1)
     
     # 5. Amount

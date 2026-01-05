@@ -112,7 +112,7 @@ export class OCRService {
 
             const pResponse = await axios.post(PADDLE_URL, pFormData, {
                 headers: { ...pFormData.getHeaders() },
-                timeout: 15000 // 15s timeout
+                timeout: 3000 // 3s timeout (Fast local or fail)
             });
 
             if (pResponse.data && pResponse.data.success) {
@@ -242,7 +242,7 @@ export class OCRService {
         // 4. MERCHANT ID (12-15 digits usually)
         const merchantPatterns = [
             /(?:MID|Merchant|Merch|ID|التاجر)[:\.\s]*(\d{8,15})/i,
-            /\b(\d{12,15})\b/ // Standalone long number often ID
+            /\b(\d{10,15})\b/ // Standalone 10-15 digits often ID
         ];
         for (const pat of merchantPatterns) {
             const m = cleanText.match(pat);
@@ -269,28 +269,32 @@ export class OCRService {
         }
 
         // 6. APPROVAL / AUTH CODE (6 digits)
-        const authPatterns = [
-            /(?:Approval|Appr|Auth|Code|الموافقة)[:\.\s]*(\d{6})/i,
-            /\b(\d{6})\b/
-        ];
-        // Only verify standalone 6 digits if we are sure it's not part of something else
-        for (const pat of authPatterns) {
-            const m = cleanText.match(pat);
-            if (m) {
-                // Ensure it's not the time (e.g. 12:30:45 -> 123045 removed by spacing)
-                data.approvalNumber = m[1];
-                break;
+        const authMatch = cleanText.match(/(?:Approval|Appr|Auth|Code|الموافقة)\s*(?:CODE|NO)?[:\.\s]*(\d{6})/i);
+        if (authMatch) {
+            data.approvalNumber = authMatch[1];
+        } else {
+            // Fallback: look for any standalone 6-digit number that isn't part of a time or long ID
+            const sixDigitMatches = cleanText.match(/\b\d{6}\b/g);
+            if (sixDigitMatches) {
+                // Heuristic: pick the one that doesn't look like a time part (if we can't be sure, take the first)
+                data.approvalNumber = sixDigitMatches[0];
             }
         }
 
         // 7. BATCH (1-6 digits)
-        const batchMatch = cleanText.match(/(?:Batch|الباتش|رقم الباتش)[:\.\s]*(\d{1,6})/i);
+        const batchMatch = cleanText.match(/(?:Batch|الباتش|رقم الباتش)\s*(?:NO|#)?[:\.\s]*(\d{1,6})/i);
         if (batchMatch) data.batchNumber = batchMatch[1];
 
-        // 8. LAST 4 DIGITS (Updated to be more flexible with masks like * * * * or x x x x)
-        // Matches 4 of (*, x, X, .) followed by 4 digits
-        const last4Match = cleanText.match(/(?:[\*xX\.]\s*){4}\s*(\d{4})|(?:\d{4})\s*$/m);
-        if (last4Match) data.last4Digits = last4Match[1] || last4Match[0].trim();
+        // 8. LAST 4 DIGITS
+        // Improved to avoid AID (Alpha-numeric) and look for credit card masked patterns
+        const last4Match = cleanText.match(/(?:[\*xX\.\-\s]{4,}|Card|Card No|PAN)[:\.\s]*\d*(\d{4})\b/i);
+        if (last4Match) {
+            data.last4Digits = last4Match[1];
+        } else {
+            // Fallback for standalone 4-digit at end of line
+            const standalone4 = cleanText.match(/\b\d{4}$/m);
+            if (standalone4) data.last4Digits = standalone4[0];
+        }
 
         // 9. RRN (12 digits)
         const rrnMatch = cleanText.match(/(?:RRN|Ref|Reference)[:\.\s]*(\d{12})/i);
