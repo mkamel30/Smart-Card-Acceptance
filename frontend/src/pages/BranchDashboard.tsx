@@ -212,7 +212,7 @@ export default function BranchDashboard() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    {canSelectBranch && (
+                    {canSelectBranch ? (
                         <div className="w-full sm:w-64">
                             <Select
                                 isMulti
@@ -230,6 +230,11 @@ export default function BranchDashboard() {
                                     })
                                 }}
                             />
+                        </div>
+                    ) : (
+                        <div className="w-full sm:w-64 flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-600 font-bold shadow-sm">
+                            <span className="text-gray-400 text-xs">الفرع الحالي:</span>
+                            <span className="truncate">{selectedBranches[0]?.label || '...'}</span>
                         </div>
                     )}
                     <div className="flex gap-2">
