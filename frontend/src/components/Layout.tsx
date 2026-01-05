@@ -119,10 +119,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         )}
 
                         {branchName && (
-                            <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
-                                <Building2 className="w-4 h-4 text-gray-400" />
+                            <button
+                                onClick={() => {
+                                    if (confirm('هل تريد تسجيل الخروج والعودة لاختيار الفرع؟')) {
+                                        logout();
+                                    }
+                                }}
+                                className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all cursor-pointer"
+                                title="اضغط للخروج وتغيير الفرع"
+                            >
+                                <Building2 className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
                                 <span className="text-sm font-bold text-gray-700">{branchName}</span>
-                            </div>
+                            </button>
                         )}
 
                         {isAdmin || user ? (
