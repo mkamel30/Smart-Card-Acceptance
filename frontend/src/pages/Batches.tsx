@@ -90,6 +90,7 @@ export default function Batches() {
                                         to={`/report/batch/${batch.batchNumber}`}
                                         target="_blank"
                                         className="text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-bold inline-flex items-center gap-2 transition-colors"
+                                        title="عرض تفاصيل الباتش"
                                     >
                                         <Eye className="w-4 h-4" />
                                         عرض التفاصيل

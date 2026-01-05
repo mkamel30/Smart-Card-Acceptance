@@ -422,6 +422,7 @@ export default function SettlementWorkFlow() {
                                                             <button
                                                                 onClick={() => handleDownloadPDF(batch.batchNumber)}
                                                                 className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1"
+                                                                title="تحميل تقرير PDF"
                                                             >
                                                                 <Download className="w-4 h-4" />
                                                                 <span className="sm:hidden">PDF</span>
@@ -429,6 +430,7 @@ export default function SettlementWorkFlow() {
                                                             <button
                                                                 onClick={() => handleDownloadExcel(batch.batchNumber)}
                                                                 className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1 text-green-700 bg-green-50 hover:bg-green-100 border-green-200"
+                                                                title="تحميل تقرير Excel"
                                                             >
                                                                 <FileSpreadsheet className="w-4 h-4" />
                                                                 <span className="sm:hidden">Excel</span>
@@ -436,6 +438,7 @@ export default function SettlementWorkFlow() {
                                                             <button
                                                                 onClick={() => handleEmailPDF(batch)}
                                                                 className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1"
+                                                                title="إرسال التقرير بالبريد"
                                                             >
                                                                 <Mail className="w-4 h-4" />
                                                             </button>
@@ -443,6 +446,7 @@ export default function SettlementWorkFlow() {
                                                                 onClick={() => handleSettleBatch(batch.batchNumber)}
                                                                 disabled={settling === batch.batchNumber}
                                                                 className="col-span-2 sm:w-auto btn-primary px-4 py-2 text-sm flex items-center justify-center gap-2"
+                                                                title="تنفيذ التسوية النهائية"
                                                             >
                                                                 {settling === batch.batchNumber ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                                                                 تسوية
@@ -458,6 +462,15 @@ export default function SettlementWorkFlow() {
                                                 <div key={t.id} className="p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50 transition-colors">
                                                     <div className="flex items-start gap-3">
                                                         <span className="text-gray-400 text-sm mt-0.5 w-6">{idx + 1}</span>
+                                                        {getImageUrl(t) && (
+                                                            <button
+                                                                onClick={() => window.open(getImageUrl(t), '_blank')}
+                                                                className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-primary transition-colors"
+                                                                title="معاينة صورة الإيصال"
+                                                            >
+                                                                <Image className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                         <div>
                                                             <p className="font-bold text-sm text-gray-800">{t.merchantName || t.merchantCode}</p>
                                                             <p className="text-xs text-gray-500 line-clamp-1">{t.subService}</p>
@@ -470,6 +483,7 @@ export default function SettlementWorkFlow() {
                                                         <button
                                                             onClick={() => window.open(`/settlement/${t.id}/print`, '_blank')}
                                                             className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+                                                            title="طباعة الإيصال"
                                                         >
                                                             <Printer className="w-4 h-4" />
                                                         </button>

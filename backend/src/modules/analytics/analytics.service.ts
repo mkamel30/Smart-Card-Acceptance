@@ -113,7 +113,36 @@ export class AnalyticsService {
                 settlementDate: 'desc'
             }
         });
+    async getPaginatedTransactions(page: number, limit: number, filters: any) {
+            const skip = (page - 1) * limit;
+
+            const [data, total] = await Promise.all([
+                prisma.settlement.findMany({
+                    where: filters,
+                    include: {
+                        branch: {
+                            select: { name: true, code: true }
+                        }
+                    },
+                    orderBy: {
+                        settlementDate: 'desc'
+                    },
+                    skip,
+                    take: limit
+                }),
+                prisma.settlement.count({ where: filters })
+            ]);
+
+            return {
+                data,
+                pagination: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
+                }
+            };
+        }
     }
-}
 
 export default new AnalyticsService();

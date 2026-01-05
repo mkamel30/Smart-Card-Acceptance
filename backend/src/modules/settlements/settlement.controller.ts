@@ -5,8 +5,22 @@ import { CreateSettlementSchema, UpdateSettlementSchema, SettlementStatusSchema 
 export class SettlementController {
     async create(req: Request, res: Response, next: NextFunction) {
         try {
-
             const validatedData = CreateSettlementSchema.parse(req.body);
+
+            // Duplicate Check
+            const isDuplicate = await settlementService.checkDuplicate(
+                validatedData.approvalNumber || '',
+                validatedData.last4Digits || '',
+                validatedData.batchNumber || ''
+            );
+
+            if (isDuplicate) {
+                return res.status(400).json({
+                    error: 'Duplicate Transaction',
+                    message: `تم رفض المعاملة لأنها مسجلة مسبقاً (رقم الموافقة: ${validatedData.approvalNumber}، آخر 4 أرقام: ${validatedData.last4Digits}، رقم الباتش: ${validatedData.batchNumber})`
+                });
+            }
+
             const settlement = await settlementService.createSettlement(validatedData);
             res.status(201).json(settlement);
         } catch (error: any) {

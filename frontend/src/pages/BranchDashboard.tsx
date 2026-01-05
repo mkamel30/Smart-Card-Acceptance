@@ -7,7 +7,7 @@ import {
 import Select from 'react-select';
 import {
     LayoutDashboard, Calendar, Briefcase, Landmark, CreditCard,
-    ArrowUpRight, TrendingUp, RefreshCw, Download
+    ArrowUpRight, TrendingUp, RefreshCw, Download, Image as ImageIcon, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/context/AdminContext';
@@ -34,6 +34,10 @@ export default function BranchDashboard() {
         // Fetch branches only if user has permission to see multiple or select
         if (canSelectBranch) {
             fetchBranches();
+        } else if (user?.branches?.length === 1) {
+            // Use functional update or set directly
+            const b = user.branches[0];
+            setSelectedBranches([{ value: b.id, label: b.name }]);
         }
         loadData();
     }, [user, isAdmin]);
@@ -113,6 +117,53 @@ export default function BranchDashboard() {
         } catch (err) {
             console.error('Export failed', err);
         }
+    };
+
+    // Transactions State
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [viewImage, setViewImage] = useState<string | null>(null);
+
+    const loadTransactions = async () => {
+        try {
+            const params = {
+                branches: selectedBranches.map(b => b.value),
+                dateFrom,
+                dateTo,
+                status,
+                bankName: bank,
+                page,
+                limit: 10
+            };
+            const res = await api.get('/analytics/transactions', { params });
+            setTransactions(res.data.data);
+            setTotalPages(res.data.pagination.totalPages);
+        } catch (err) {
+            console.error('Failed to load transactions');
+        }
+    };
+
+    useEffect(() => {
+        loadTransactions();
+    }, [page, summary]); // Reload when page changes or summary updates (implies filter change)
+
+    // Image Modal Component
+    const ImageModal = () => {
+        if (!viewImage) return null;
+        return (
+            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setViewImage(null)}>
+                <div className="bg-white rounded-2xl p-2 max-w-2xl w-full relative animate-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                    <button
+                        onClick={() => setViewImage(null)}
+                        className="absolute top-4 right-4 bg-black/50 hover:bg-black text-white p-2 rounded-full transition-colors z-10"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                    <img src={viewImage} alt="Receipt" className="w-full h-auto rounded-xl" />
+                </div>
+            </div>
+        );
     };
 
     const MetricCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
@@ -412,5 +463,85 @@ export default function BranchDashboard() {
                 </div>
             </div>
         </div>
+
+            {/* Transactions Table */ }
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-gray-800">أحدث المعاملات</h3>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(p => p - 1)}
+                            className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                        >
+                            <ChevronRight className="w-5 h-5" />
+                        </button>
+                        <span className="flex items-center px-4 font-bold text-gray-600 bg-gray-50 rounded-lg">
+                            {page} / {totalPages}
+                        </span>
+                        <button
+                            disabled={page === totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                            className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50/50">
+                            <tr>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500">التاريخ</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500">الفرع</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500">البنك</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500">المبلغ</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500">الحالة</th>
+                                <th className="text-center p-4 text-xs font-bold text-gray-500 w-24">صورة</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {transactions.map((tx: any) => (
+                                <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="p-4 text-sm font-bold text-gray-700">
+                                        {format(new Date(tx.settlementDate), 'yyyy/MM/dd')}
+                                    </td>
+                                    <td className="p-4 text-sm text-gray-600">{tx.branch?.name}</td>
+                                    <td className="p-4 text-sm text-gray-600 font-medium">{tx.bankName}</td>
+                                    <td className="p-4 text-sm font-bold text-gray-900">
+                                        {Number(tx.totalAmount).toLocaleString()} ج.m
+                                    </td>
+                                    <td className="p-4">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                            tx.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                            tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                                            tx.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                            'bg-blue-100 text-blue-700'
+                                        }`}>
+                                            {tx.status}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        {tx.receiptImageUrl ? (
+                                            <button
+                                                onClick={() => setViewImage(tx.receiptImageUrl)}
+                                                className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-primary transition-colors mx-auto"
+                                                title="عرض الصورة"
+                                            >
+                                                <ImageIcon className="w-5 h-5" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-gray-300">-</span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <ImageModal />
+        </div >
     );
 }

@@ -81,6 +81,19 @@ export class AnalyticsController {
         }
     }
 
+    async getTransactions(req: Request, res: Response, next: NextFunction) {
+        try {
+            const user = (req as any).user;
+            const page = Number(req.query.page) || 1;
+            const limit = Number(req.query.limit) || 10;
+            const filters = this.parseFilters(req.query, user);
+            const result = await analyticsService.getPaginatedTransactions(page, limit, filters);
+            res.json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     private parseFilters(query: any, user?: any) {
         const filters: any = {};
 

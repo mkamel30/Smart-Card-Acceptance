@@ -4,20 +4,31 @@ import { Settlement, SettlementWithReceipt } from '../../common/types';
 
 // Service to handle settlement business logic
 export class SettlementService {
+    async checkDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string) {
+        if (!approvalNumber || !last4Digits || !batchNumber) return false;
+
+        const existing = await prisma.settlement.findFirst({
+            where: {
+                approvalNumber,
+                last4Digits,
+                batchNumber,
+                status: { not: 'REJECTED' } // Allow retry if previous attempt was rejected
+            }
+        });
+
+        return !!existing;
+    }
+
     async createSettlement(data: CreateSettlementInput, userId: string = 'system') {
         // Validation: Prevent duplicate transactions in the same batch
-        if (data.batchNumber && data.approvalNumber && data.merchantCode) {
-            const existing = await prisma.settlement.findFirst({
-                where: {
-                    batchNumber: data.batchNumber,
-                    merchantCode: data.merchantCode,
-                    approvalNumber: data.approvalNumber
-                }
-            });
+        const isDuplicate = await this.checkDuplicate(
+            data.approvalNumber || '',
+            data.last4Digits || '',
+            data.batchNumber || ''
+        );
 
-            if (existing) {
-                throw new Error(`Duplicate transaction: Transaction with Approval Number ${data.approvalNumber} already exists in Batch ${data.batchNumber} for Merchant ${data.merchantCode}`);
-            }
+        if (isDuplicate) {
+            throw new Error(`Duplicate transaction: Transaction with Approval Number ${data.approvalNumber} already exists in Batch ${data.batchNumber}`);
         }
 
         const netAmount = Number(data.settledAmount) - Number(data.fees || 0);

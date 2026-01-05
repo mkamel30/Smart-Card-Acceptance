@@ -7,6 +7,7 @@ const router = Router();
 
 router.get('/summary', authenticate, analyticsController.getSummary.bind(analyticsController));
 router.get('/charts', authenticate, analyticsController.getCharts.bind(analyticsController));
+router.get('/transactions', authenticate, analyticsController.getTransactions.bind(analyticsController));
 router.get('/export', authenticate, analyticsController.exportSettlements.bind(analyticsController));
 
 export default router;
