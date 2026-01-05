@@ -11,6 +11,18 @@ export interface AuthRequest extends Request {
 }
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+    // 1. Check for Legacy Admin Password
+    const adminPassword = req.headers['x-admin-password'];
+    if (adminPassword && adminPassword === process.env.ADMIN_PASSWORD) {
+        (req as AuthRequest).user = {
+            id: 'legacy-admin',
+            role: 'ADMIN',
+            allowedBranches: [] // Admin sees all regardless
+        };
+        return next();
+    }
+
+    // 2. Check for JWT Token
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         return res.status(401).json({ error: 'No token provided' });

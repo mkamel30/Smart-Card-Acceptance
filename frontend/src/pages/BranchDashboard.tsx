@@ -297,9 +297,9 @@ export default function BranchDashboard() {
 
             {/* Charts Row 2 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-w-0">
                     <h3 className="text-lg font-bold mb-6 text-gray-800">أداء الفروع (الصافي)</h3>
-                    <div className="h-80 w-full">
+                    <div className="h-80 w-full min-w-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={charts?.byBranch || []} layout="vertical">
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
@@ -326,9 +326,9 @@ export default function BranchDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-w-0">
                     <h3 className="text-lg font-bold mb-6 text-gray-800">توزيع البنوك</h3>
-                    <div className="h-80 w-full">
+                    <div className="h-80 w-full min-w-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={charts?.byBank || []}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
