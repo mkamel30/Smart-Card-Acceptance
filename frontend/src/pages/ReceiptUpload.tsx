@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, X, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
@@ -13,7 +13,7 @@ export default function ReceiptUpload() {
     const [uploading, setUploading] = useState(false);
 
     // Use Client-Side OCR Hook
-    const { processReceipt, data: extractedData, loading: processing, progress, error, setData: setLocalData } = useReceipt() as any; // Cast if setData is not exposed (I need to check hook)
+    const { processReceipt, data: extractedData, loading: processing, progress } = useReceipt() as any; // Cast if setData is not exposed (I need to check hook)
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         const droppedFile = acceptedFiles[0];

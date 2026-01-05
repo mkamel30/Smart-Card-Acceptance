@@ -111,7 +111,7 @@ export const useReceipt = (): OCRResult => {
                 imageFile,
                 'ara+eng',
                 {
-                    logger: m => {
+                    logger: (m: any) => {
                         if (m.status === 'recognizing text') {
                             setProgress(Math.round(m.progress * 100));
                         }
