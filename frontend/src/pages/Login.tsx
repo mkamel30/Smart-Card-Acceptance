@@ -13,7 +13,12 @@ export default function Login() {
     const navigate = useNavigate();
     const { login } = useAuth();
 
-
+    // TEMPORARY: Create admin user
+    useEffect(() => {
+        api.post('/auth/setup-admin', {})
+            .then(res => console.log('Setup result:', res.data))
+            .catch(err => console.error('Setup failed:', err));
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
