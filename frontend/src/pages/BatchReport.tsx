@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '@/api/client';
-import { Printer, ArrowRight, Trash2 } from 'lucide-react';
+import { Printer, ArrowRight, Trash2, Edit2 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
+import EditSettlementModal from '@/components/EditSettlementModal';
 
 interface Transaction {
     id: string;
@@ -25,6 +25,7 @@ export default function BatchReport() {
     const { batchNumber } = useParams();
     const { isAdmin } = useAdmin();
     const [batch, setBatch] = useState<BatchData | null>(null);
+    const [editingTransaction, setEditingTransaction] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -136,13 +137,19 @@ export default function BatchReport() {
                                     {Number(t.settledAmount).toLocaleString()}
                                 </td>
                                 {isAdmin && (
-                                    <td className="px-4 py-3 text-center print:hidden">
+                                    <td className="px-4 py-3 text-center print:hidden flex justify-center gap-2">
+                                        <button
+                                            onClick={() => setEditingTransaction(t as any)}
+                                            className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-colors"
+                                            title="تعديل"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
                                         <button
                                             onClick={async () => {
                                                 if (confirm('هل أنت متأكد من حذف هذا السجل؟ لا يمكن التراجع.')) {
                                                     try {
                                                         await api.delete(`/settlements/${t.id}`);
-                                                        // Optimistic or Refetch
                                                         setBatch(prev => prev ? {
                                                             ...prev,
                                                             transactions: prev.transactions.filter(tr => tr.id !== t.id),
@@ -170,6 +177,19 @@ export default function BatchReport() {
                     <p>تم استخراج هذا التقرير آلياً من نظام تسوية البطاقات الإلكترونية - شركة سمارت</p>
                     <p className="mt-1" dir="ltr">{new Date().toLocaleString('en-GB')}</p>
                 </div>
+
+                <EditSettlementModal
+                    isOpen={!!editingTransaction}
+                    onClose={() => setEditingTransaction(null)}
+                    settlement={editingTransaction}
+                    onSave={() => {
+                        // Reload batch
+                        api.get('/settlements/batches').then(res => {
+                            const found = res.data.find((b: any) => b.batchNumber === batchNumber);
+                            setBatch(found);
+                        });
+                    }}
+                />
             </div>
         </div>
     );

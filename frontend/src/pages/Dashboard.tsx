@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/api/client';
-import { Download, Mail, Edit2, Filter, Zap, Loader2, Printer } from 'lucide-react';
+import { Download, Mail, Edit2, Filter, Zap, Loader2, Printer, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAdmin } from '@/context/AdminContext';
+import EditSettlementModal from '@/components/EditSettlementModal';
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -10,6 +12,8 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
     const [filters] = useState({ category: '' });
+    const { isAdmin } = useAdmin();
+    const [editingSettlement, setEditingSettlement] = useState<any>(null);
 
     useEffect(() => {
         fetchSettlements();
@@ -210,12 +214,46 @@ export default function Dashboard() {
                                     <Link to={`/settlement/${s.id}/receipt`} className="p-2 text-gray-400 hover:text-primary transition-colors" title="عرض الإيصال">
                                         <Edit2 className="w-4 h-4" />
                                     </Link>
+
+                                    {isAdmin && (
+                                        <>
+                                            <button
+                                                onClick={() => setEditingSettlement(s)}
+                                                className="p-2 text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                                title="تعديل"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    if (confirm('هل أنت متأكد من الحذف؟')) {
+                                                        try {
+                                                            await api.delete(`/settlements/${s.id}`);
+                                                            fetchSettlements();
+                                                        } catch (e) { alert('فشل الحذف'); }
+                                                    }
+                                                }}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                title="حذف"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    )}
+
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
+            <EditSettlementModal
+                isOpen={!!editingSettlement}
+                onClose={() => setEditingSettlement(null)}
+                settlement={editingSettlement}
+                onSave={fetchSettlements}
+            />
         </div>
     );
 }
