@@ -16,9 +16,9 @@ export class SettlementController {
     }
 
     async getAll(req: Request, res: Response, next: NextFunction) {
+        let filters: any = {};
         try {
             const { status, bankName, page, limit } = req.query;
-            const filters: any = {};
             if (status) filters.status = status;
             if (bankName) filters.bankName = { contains: String(bankName), mode: 'insensitive' };
             if (req.query.branchId && req.query.branchId !== 'undefined' && req.query.branchId !== 'null') filters.branchId = String(req.query.branchId);
@@ -29,7 +29,13 @@ export class SettlementController {
                 Number(limit) || 10
             );
             res.json(result);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('List Settlements Error DETAILS:', {
+                error: error.message,
+                stack: error.stack,
+                filters,
+                query: req.query
+            });
             next(error);
         }
     }

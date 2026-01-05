@@ -57,39 +57,50 @@ def parse_receipt(text_lines: list) -> dict:
     if auth_match: data['approvalNumber'] = auth_match.group(1)
     
     # 5. Amount
-    # Look for decimals
-    amounts = re.findall(r'(\d+[.,]\d{2})', full_text)
-    if amounts:
-        # Usually the largest amount or the one near "Total"
-        # For simplicity, if "TOTAL" is in a line, take the amount from that line or next
-        for i, line in enumerate(text_lines):
-            if any(k in line.upper() for k in ['TOTAL', 'AMOUNT', 'SALE', 'الاجمالي']):
-                # Search in this line
-                m = re.search(r'(\d+[.,]\d{2})', line)
-                if m: 
-                    data['totalAmount'] = float(m.group(1).replace(',', ''))
-                    break
-        # Fallback to largest if not found by keyword
-        if 'totalAmount' not in data and amounts:
-            try:
-                data['totalAmount'] = max([float(a.replace(',', '')) for a in amounts])
-            except:
-                pass
+    # Clean full_text for amount search (remove spaces between digits and dots)
+    clean_amt_text = re.sub(r'(\d)\s+([.,])\s+(\d)', r'\1\2\3', full_text)
+    
+    # Strategy: Find lines with keywords, then search for amounts
+    keywords = ['TOTAL', 'AMOUNT', 'SALE', 'الاجمالي', 'المبلغ', 'صافي']
+    for i, line in enumerate(text_lines):
+        if any(k in line.upper() for k in keywords):
+            # Search in current line, then next 2 lines
+            search_window = '\n'.join(text_lines[i:i+3])
+            m = re.search(r'(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})', search_window)
+            if m:
+                val = m.group(1).replace(',', '')
+                if '.' in val and val.count('.') > 1: # Handle 1.250.00 -> 1250.00
+                    parts = val.split('.')
+                    val = ''.join(parts[:-1]) + '.' + parts[-1]
+                data['totalAmount'] = float(val)
+                break
 
-    # 6. Date
+    # Fallback: Find largest amount
+    if 'totalAmount' not in data:
+        all_amounts = re.findall(r'(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})', full_text)
+        if all_amounts:
+            parsed_amts = []
+            for a in all_amounts:
+                try:
+                    v = a.replace(',', '')
+                    if v.count('.') > 1:
+                        parts = v.split('.')
+                        v = ''.join(parts[:-1]) + '.' + parts[-1]
+                    parsed_amts.append(float(v))
+                except: continue
+            if parsed_amts: data['totalAmount'] = max(parsed_amts)
+
+    # 6. Date (DD/MM/YYYY or DD-MM-YYYY)
     date_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{2,4})', full_text)
     if date_match:
-        d = date_match.group(1)
-        # Normalize to YYYY-MM-DD if possible
-        parts = re.split(r'[/-]', d)
+        d = date_match.group(1).replace('/', '-')
+        parts = d.split('-')
         if len(parts) == 3:
-            try:
-                if len(parts[2]) == 4:
-                    data['date'] = f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
-                elif len(parts[0]) == 4:
-                    data['date'] = f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
-            except:
-                pass
+            day, month, year = parts
+            if len(year) == 2: year = f"20{year}"
+            # If accidentally swapped (YYYY-MM-DD or something else)
+            if len(day) == 4: year, day = day, year
+            data['date'] = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
 
     # 7. Last 4 Digits
     card_match = re.search(r'(\d{4,6})[\*xX \.]+(\d{4})', full_text)
