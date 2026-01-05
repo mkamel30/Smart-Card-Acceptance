@@ -1,4 +1,3 @@
-```javascript
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -35,7 +34,7 @@ export default function ReceiptUpload() {
 
         try {
             // Server will use Google Vision API (Fast & Accurate)
-            const res = await api.post(`/ receipts / ${ id } `, formData, {
+            const res = await api.post(`/receipts/${id}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setExtractedData(res.data);
@@ -55,9 +54,8 @@ export default function ReceiptUpload() {
                 {!preview ? (
                     <div
                         {...getRootProps()}
-                        className={`border - 2 border - dashed rounded - xl p - 12 flex flex - col items - center justify - center cursor - pointer transition - colors ${
-    isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'
-} `}
+                        className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer transition-colors ${isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'
+                            }`}
                     >
                         <input {...getInputProps()} />
                         <Upload className="w-12 h-12 text-gray-400 mb-4" />
@@ -139,11 +137,10 @@ export default function ReceiptUpload() {
                     </div>
                 )}
             </div>
-            
+
             <button onClick={() => navigate('/')} className="text-primary hover:underline text-sm font-medium">
                 تخطي هذه الخطوة والعودة للوحة التحكم
             </button>
         </div>
     );
 }
-```
