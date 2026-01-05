@@ -60,11 +60,48 @@ export class OCRService {
             console.error('Upload Failed', err);
         }
 
-        // 2. Perform OCR (using ara+eng)
-        // Note: First run might be slow as it downloads language data
-        const { data: { text } } = await Tesseract.recognize(uploadBuffer, 'ara+eng', {
-            logger: m => console.log(m)
-        });
+        // 2. Perform OCR
+        // Try Google Vision API first (if key provided), else fallback to Tesseract
+        let text = '';
+        const GOOGLE_API_KEY = 'AQ.Ab8RN6Lj_W9uRCv4wa92VzsHkDKN7Y-YAJQHuwi70sX5spwbBQ'; // User provided key
+
+        if (GOOGLE_API_KEY) {
+            try {
+                console.log('Attempting Google Vision OCR...');
+                const start = Date.now();
+                const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        requests: [{
+                            image: { content: uploadBuffer.toString('base64') },
+                            features: [{ type: 'TEXT_DETECTION' }]
+                        }]
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.responses?.[0]?.fullTextAnnotation?.text) {
+                    text = result.responses[0].fullTextAnnotation.text;
+                    console.log(`Google Vision Success (${Date.now() - start}ms)`);
+                } else if (result.error) {
+                    console.error('Google Vision API Error:', result.error);
+                    throw new Error('Google Vision API Error');
+                } else {
+                    console.warn('Google Vision returned no text, falling back...');
+                    throw new Error('No text found');
+                }
+            } catch (err) {
+                console.warn('Google Vision failed, falling back to Tesseract:', err);
+                // Fallback to Tesseract
+                const tesseractResult = await Tesseract.recognize(uploadBuffer, 'ara+eng');
+                text = tesseractResult.data.text;
+            }
+        } else {
+            const tesseractResult = await Tesseract.recognize(uploadBuffer, 'ara+eng');
+            text = tesseractResult.data.text;
+        }
 
         // 3. Parse Text
         const parsedData = this.parseReceiptText(text);
