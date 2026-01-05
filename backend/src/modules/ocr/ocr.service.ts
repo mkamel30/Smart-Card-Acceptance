@@ -130,7 +130,32 @@ export class OCRService {
             console.warn('PaddleOCR failed or not running:', (err as any).message);
         }
 
-        // --- Step B: Fallback to Tesseract.js (Free & Built-in) ---
+        // --- Step B: Try OCR.space (Online Free/Paid API) ---
+        const OCR_SPACE_KEY = process.env.OCR_SPACE_API_KEY;
+        if (!text && OCR_SPACE_KEY && publicUrl) {
+            try {
+                console.log('Attempting OCR.space via Public URL...');
+                const osFormData = new FormData();
+                osFormData.append('url', publicUrl);
+                osFormData.append('language', 'eng');
+                osFormData.append('isOverlayRequired', 'false');
+                osFormData.append('OCREngine', '2');
+
+                const osResponse = await axios.post('https://api.ocr.space/parse/image', osFormData, {
+                    headers: { ...osFormData.getHeaders(), 'apikey': OCR_SPACE_KEY },
+                    timeout: 8000
+                });
+
+                if (osResponse.data?.ParsedResults?.[0]?.ParsedText) {
+                    text = osResponse.data.ParsedResults[0].ParsedText;
+                    console.log('OCR.space Success');
+                }
+            } catch (err) {
+                console.warn('OCR.space failed:', (err as any).message);
+            }
+        }
+
+        // --- Step C: Fallback to Tesseract.js (Free & Built-in) ---
         if (!text) {
             try {
                 console.log('Falling back to Tesseract.js...');
@@ -160,10 +185,14 @@ export class OCRService {
 
         if (publicUrl) parsedData.imageUrl = publicUrl;
 
+        let usedEngine = 'Tesseract.js';
+        if (paddleData) usedEngine = 'PaddleOCR';
+        else if (text && OCR_SPACE_KEY) usedEngine = 'OCR.space';
+
         return {
             data: parsedData,
             rawText: text,
-            engine: paddleData ? 'PaddleOCR' : 'Tesseract.js'
+            engine: usedEngine
         };
     }
 
