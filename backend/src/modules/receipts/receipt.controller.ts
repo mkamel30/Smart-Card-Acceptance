@@ -11,7 +11,7 @@ export class ReceiptController {
                 return res.status(400).json({ message: 'No file uploaded' });
             }
 
-            const receipt = await receiptService.processOCR(file.path, settlementId);
+            const receipt = await receiptService.processOCR(file, settlementId);
             res.status(200).json(receipt);
         } catch (error) {
             next(error);
