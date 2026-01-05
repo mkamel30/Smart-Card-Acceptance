@@ -107,11 +107,8 @@ export class OCRService {
 
         // 2. Perform OCR
         let text = '';
-        let paddleData: any = null;
-
         // --- Step A: Try OCR.space (Primary Engine) ---
         const OCR_SPACE_KEY = process.env.OCR_SPACE_API_KEY;
-        const usedEngine = 'OCR.space';
 
         if (OCR_SPACE_KEY && publicUrl) {
             try {
@@ -154,7 +151,7 @@ export class OCRService {
         if (publicUrl) parsedData.imageUrl = publicUrl;
 
         // Determine which engine actually provided the text
-        const finalEngine = (text && OCR_SPACE_KEY && !text.includes('Tesseract.js')) ? 'OCR.space' : 'Tesseract.js';
+        const finalEngine = (OCR_SPACE_KEY && text && !text.toLowerCase().includes('tesseract')) ? 'OCR.space' : 'Tesseract.js';
 
         return {
             data: parsedData,
