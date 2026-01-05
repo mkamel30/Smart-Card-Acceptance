@@ -103,15 +103,16 @@ export class OCRService {
         let text = '';
         let paddleData: any = null;
 
-        // --- Step A: Try PaddleOCR Service (Free & Local) ---
+        // --- Step A: Try PaddleOCR Service (Free & Local/Self-hosted) ---
         try {
-            console.log('Attempting PaddleOCR...');
+            const PADDLE_URL = process.env.PADDLE_OCR_URL || 'http://localhost:5000/scan';
+            console.log(`Attempting PaddleOCR at ${PADDLE_URL}...`);
             const pFormData = new FormData();
             pFormData.append('file', ocrBuffer, { filename: 'receipt.png' });
 
-            const pResponse = await axios.post('http://localhost:5000/scan', pFormData, {
+            const pResponse = await axios.post(PADDLE_URL, pFormData, {
                 headers: { ...pFormData.getHeaders() },
-                timeout: 10000 // 10s timeout
+                timeout: 15000 // 15s timeout
             });
 
             if (pResponse.data && pResponse.data.success) {
@@ -124,7 +125,7 @@ export class OCRService {
         }
 
         // --- Step B: Try Google Vision API (Paid) ---
-        const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AQ.Ab8RN6Lj_W9uRCv4wa92VzsHkDKN7Y-YAJQHuwi70sX5spwbBQ';
+        const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
         if (GOOGLE_API_KEY && !text) {
             try {

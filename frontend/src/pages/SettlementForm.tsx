@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useLocation } from 'react-router-dom';
 import api from '@/api/client';
-import { Zap, CheckCircle2, Loader2, Plus, Package, Download, Mail, FileSpreadsheet, Printer } from 'lucide-react';
+import { Zap, CheckCircle2, Loader2, Plus, Package, Download, Mail, FileSpreadsheet, Printer, Image } from 'lucide-react';
 
 const settlementSchema = z.object({
     settlementDate: z.string().min(1, 'التاريخ مطلوب'),
@@ -43,6 +43,14 @@ export default function SettlementWorkFlow() {
     const [settling, setSettling] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [recentSettlements, setRecentSettlements] = useState<any[]>([]);
+
+    const getImageUrl = (s: z.infer<typeof settlementSchema> | any) => {
+        const path = s.receipt?.imageUrl || s.receiptImageUrl;
+        if (!path) return null;
+        const cleanPath = path.replace(/\\/g, '/');
+        if (cleanPath.startsWith('http')) return cleanPath;
+        return cleanPath.startsWith('/') ? `/api${cleanPath}` : `/api/${cleanPath}`;
+    };
     const [batches, setBatches] = useState<BatchGroup[]>([]);
 
     const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, reset } = useForm<SettlementFormValues>({
@@ -319,9 +327,20 @@ export default function SettlementWorkFlow() {
                             <div className="space-y-4">
                                 {recentSettlements.map((s, i) => (
                                     <div key={i} className="flex justify-between items-center border-b border-white/10 pb-3 last:border-0">
-                                        <div>
-                                            <p className="font-bold">{s.merchantName || 'تاجر غير مسمى'}</p>
-                                            <p className="text-[10px] opacity-50">{new Date(s.settlementDate).toLocaleString('ar-EG')}</p>
+                                        <div className="flex items-center gap-3">
+                                            {getImageUrl(s) && (
+                                                <button
+                                                    onClick={() => window.open(getImageUrl(s), '_blank')}
+                                                    className="p-1.5 bg-white/5 hover:bg-white/10 rounded text-primary-light transition-colors"
+                                                    title="معاينة الصورة"
+                                                >
+                                                    <Image className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                            <div>
+                                                <p className="font-bold">{s.merchantName || 'تاجر غير مسمى'}</p>
+                                                <p className="text-[10px] opacity-50">{new Date(s.settlementDate).toLocaleString('ar-EG')}</p>
+                                            </div>
                                         </div>
                                         <p className="font-black text-primary-light">{Number(s.netAmount).toLocaleString()} ج.م</p>
                                     </div>

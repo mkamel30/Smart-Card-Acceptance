@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/api/client';
-import { Download, Mail, Edit2, Filter, Zap, Loader2, Printer, Trash2 } from 'lucide-react';
+import { Download, Mail, Edit2, Filter, Zap, Loader2, Printer, Trash2, Image } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/context/AdminContext';
 import EditSettlementModal from '@/components/EditSettlementModal';
@@ -18,6 +18,14 @@ export default function Dashboard() {
     useEffect(() => {
         fetchSettlements();
     }, [filters]);
+
+    const getImageUrl = (s: any) => {
+        const path = s.receipt?.imageUrl || s.receiptImageUrl;
+        if (!path) return null;
+        const cleanPath = path.replace(/\\/g, '/');
+        if (cleanPath.startsWith('http')) return cleanPath;
+        return cleanPath.startsWith('/') ? `/api${cleanPath}` : `/api/${cleanPath}`;
+    };
 
     const fetchSettlements = async () => {
         setLoading(true);
@@ -214,6 +222,16 @@ export default function Dashboard() {
                                     <Link to={`/settlement/${s.id}/receipt`} className="p-2 text-gray-400 hover:text-primary transition-colors" title="عرض الإيصال">
                                         <Edit2 className="w-4 h-4" />
                                     </Link>
+
+                                    {getImageUrl(s) && (
+                                        <button
+                                            onClick={() => window.open(getImageUrl(s), '_blank')}
+                                            className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                                            title="فتح صورة الإيصال الأصلية"
+                                        >
+                                            <Image className="w-4 h-4" />
+                                        </button>
+                                    )}
 
                                     {isAdmin && (
                                         <>

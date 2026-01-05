@@ -130,6 +130,7 @@ export class SettlementService {
 
         const settlements = await prisma.settlement.findMany({
             where,
+            include: { receipt: true },
             orderBy: [{ batchNumber: 'asc' }, { createdAt: 'desc' }],
         });
 

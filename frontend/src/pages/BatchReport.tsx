@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Printer, ArrowRight, Trash2, Edit2 } from 'lucide-react';
+import { Printer, ArrowRight, Trash2, Edit2, Image } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import EditSettlementModal from '@/components/EditSettlementModal';
+import api from '@/api/client';
 
 interface Transaction {
     id: string;
@@ -27,6 +28,14 @@ export default function BatchReport() {
     const [batch, setBatch] = useState<BatchData | null>(null);
     const [editingTransaction, setEditingTransaction] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+
+    const getImageUrl = (s: any) => {
+        const path = s.receipt?.imageUrl || s.receiptImageUrl;
+        if (!path) return null;
+        const cleanPath = path.replace(/\\/g, '/');
+        if (cleanPath.startsWith('http')) return cleanPath;
+        return cleanPath.startsWith('/') ? `/api${cleanPath}` : `/api/${cleanPath}`;
+    };
 
     useEffect(() => {
         const fetchBatch = async () => {
@@ -122,7 +131,7 @@ export default function BatchReport() {
                             <th className="px-4 py-3">الخدمة</th>
                             <th className="px-4 py-3">رقم الموافقة</th>
                             <th className="px-4 py-3 text-left">المبلغ</th>
-                            {isAdmin && <th className="px-4 py-3 rounded-tl-lg text-center print:hidden">إجراءات</th>}
+                            <th className="px-4 py-3 rounded-tl-lg text-center print:hidden">إجراءات</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -136,37 +145,48 @@ export default function BatchReport() {
                                 <td className="px-4 py-3 font-bold text-left" dir="ltr">
                                     {Number(t.settledAmount).toLocaleString()}
                                 </td>
-                                {isAdmin && (
-                                    <td className="px-4 py-3 text-center print:hidden flex justify-center gap-2">
+                                <td className="px-4 py-3 text-center print:hidden flex justify-center gap-2">
+                                    {getImageUrl(t) && (
                                         <button
-                                            onClick={() => setEditingTransaction(t as any)}
-                                            className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-colors"
-                                            title="تعديل"
+                                            onClick={() => window.open(getImageUrl(t), '_blank')}
+                                            className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
+                                            title="فتح صورة الإيصال"
                                         >
-                                            <Edit2 className="w-4 h-4" />
+                                            <Image className="w-4 h-4" />
                                         </button>
-                                        <button
-                                            onClick={async () => {
-                                                if (confirm('هل أنت متأكد من حذف هذا السجل؟ لا يمكن التراجع.')) {
-                                                    try {
-                                                        await api.delete(`/settlements/${t.id}`);
-                                                        setBatch(prev => prev ? {
-                                                            ...prev,
-                                                            transactions: prev.transactions.filter(tr => tr.id !== t.id),
-                                                            totalAmount: prev.totalAmount - Number(t.settledAmount)
-                                                        } : null);
-                                                    } catch (e) {
-                                                        alert('فشل الحذف');
+                                    )}
+                                    {isAdmin && (
+                                        <>
+                                            <button
+                                                onClick={() => setEditingTransaction(t as any)}
+                                                className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-colors"
+                                                title="تعديل"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    if (confirm('هل أنت متأكد من حذف هذا السجل؟ لا يمكن التراجع.')) {
+                                                        try {
+                                                            await api.delete(`/settlements/${t.id}`);
+                                                            setBatch(prev => prev ? {
+                                                                ...prev,
+                                                                transactions: prev.transactions.filter(tr => tr.id !== t.id),
+                                                                totalAmount: prev.totalAmount - Number(t.settledAmount)
+                                                            } : null);
+                                                        } catch (e) {
+                                                            alert('فشل الحذف');
+                                                        }
                                                     }
-                                                }
-                                            }}
-                                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
-                                            title="حذف"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                )}
+                                                }}
+                                                className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                                                title="حذف"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                     </tbody>

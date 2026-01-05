@@ -30,10 +30,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Sidebar */}
             <aside className="w-64 bg-white border-l border-gray-200">
-                <div className="h-16 flex items-center px-6 border-b border-gray-200">
+                <Link to="/" className="h-16 flex items-center px-6 border-b border-gray-200 hover:bg-gray-50 transition-colors">
                     <img src="/logo.png" alt="Logo" className="w-10 h-10 ml-2 object-contain" />
                     <span className="text-xl font-bold">نظام التسويات</span>
-                </div>
+                </Link>
                 <nav className="p-4 space-y-2">
                     {navItems.map((item) => {
                         const Icon = item.icon;

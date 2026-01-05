@@ -21,6 +21,8 @@ npx tsx prisma/seed.ts
    - `DATABASE_URL`: (Your Supabase Connection String)
    - `SUPA_PROJECT_URL`: https://nuaslolzzocyciuobyrd.supabase.co
    - `SUPA_SERVICE_KEY`: (Your Service Key)
+   - `PADDLE_OCR_URL`: (Optional) URL to your PaddleOCR service (default: localhost:5000/scan)
+   - `GOOGLE_API_KEY`: (Optional) Your Google Vision API Key
    - `PORT`: 10000
 
 ## 3. Frontend Deployment (Vercel)
@@ -31,5 +33,5 @@ npx tsx prisma/seed.ts
    - `VITE_API_URL`: (Your Render Backend URL, e.g. https://my-app.onrender.com/api)
 
 ## 4. Admin Access
-- To add new branches, click "Admin" on the branch selection screen.
-- Password: `351762`
+- To add new branches or manage data, login as Admin.
+- Password: `TITI`
