@@ -1,0 +1,459 @@
+import { useState, useEffect, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useLocation } from 'react-router-dom';
+import api from '@/api/client';
+import { Zap, CheckCircle2, Loader2, Plus, Package, Download, Mail, FileSpreadsheet, Printer } from 'lucide-react';
+
+const settlementSchema = z.object({
+    settlementDate: z.string().min(1, 'التاريخ مطلوب'),
+    merchantCode: z.string().min(1, 'كود المخبز مطلوب'),
+    merchantName: z.string().min(1, 'اسم المخبز مطلوب'),
+    subService: z.string().min(1, 'نوع الخدمة مطلوب'),
+    settledAmount: z.number().positive('المبلغ مطلوب'),
+    approvalNumber: z.string().optional(),
+    batchNumber: z.string().optional(),
+    last4Digits: z.string().length(4, 'يجب إدخال 4 أرقام').optional(),
+    // Hidden/Defaulted fields
+    serviceCategory: z.string().default('SMART'),
+    totalAmount: z.number().optional(),
+    fees: z.number().default(0),
+    netAmount: z.number().optional(),
+    referenceNumber: z.string().optional(),
+    bankName: z.string().default('BANQUE MISR'),
+});
+
+type SettlementFormValues = z.infer<typeof settlementSchema>;
+
+interface BatchGroup {
+    batchNumber: string;
+    settlementDate: string;
+    transactions: any[];
+    totalAmount: number;
+    status: string;
+    isSettled: boolean;
+}
+
+export default function SettlementWorkFlow() {
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState<'entry' | 'settle'>('entry');
+    const [entryMode, setEntryMode] = useState<'manual' | 'ocr'>('manual');
+    const [scanning, setScanning] = useState(false);
+    const [settling, setSettling] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [recentSettlements, setRecentSettlements] = useState<any[]>([]);
+    const [batches, setBatches] = useState<BatchGroup[]>([]);
+
+    const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, reset } = useForm<SettlementFormValues>({
+        resolver: zodResolver(settlementSchema),
+        defaultValues: {
+            settlementDate: new Date().toISOString().slice(0, 16),
+            serviceCategory: 'SMART',
+            bankName: 'BANQUE MISR',
+            fees: 0,
+        }
+    });
+
+    useEffect(() => {
+        fetchRecent();
+        // Handle incoming OCR data if navigated from Quick Scan
+        const ocrData = (location.state as any)?.ocrData;
+        if (ocrData) {
+            applyOCR(ocrData);
+            // Clear the state to prevent re-applying on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
+
+    const fetchRecent = async () => {
+        try {
+            const res = await api.get('/settlements?limit=5');
+            setRecentSettlements(res.data.data);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const fetchBatches = async () => {
+        try {
+            const res = await api.get('/settlements/batches');
+            setBatches(res.data);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleSettleBatch = async (batchNumber: string) => {
+        if (!confirm(`هل أنت متأكد من تسوية جميع معاملات الباتش ${batchNumber}؟`)) return;
+        setSettling(batchNumber);
+        try {
+            await api.post(`/settlements/batches/${batchNumber}/settle`);
+            alert(`تم تسوية الباتش ${batchNumber} بنجاح!`);
+            fetchBatches();
+        } catch (e) {
+            alert('حدث خطأ أثناء التسوية');
+        } finally {
+            setSettling(null);
+        }
+    };
+
+    const handleDownloadPDF = (batchNumber: string) => {
+        // Open the HTML report page in a new tab
+        window.open(`/report/batch/${batchNumber}`, '_blank');
+    };
+
+    const handleDownloadExcel = (batchNumber: string) => {
+        window.open(`${api.defaults.baseURL}/exports/batch/${batchNumber}/excel`, '_blank');
+    };
+
+    const handleEmailPDF = (batch: BatchGroup) => {
+        const subject = `تقرير تسوية - باتش رقم ${batch.batchNumber}`;
+        const body = `السادة المعنيين،\n\nيرجى العلم بأنه تم الانتهاء من تسوية الباتش رقم ${batch.batchNumber} بتاريخ ${new Date(batch.settlementDate).toLocaleDateString('ar-EG')}.\n\nملخص:\n- عدد المعاملات: ${batch.transactions.length}\n- إجمالي المبلغ: ${batch.totalAmount.toLocaleString()} ج.م\n\nمرفق طيه ملف الـ Excel الخاص بالتسوية (برجاء تحميله ثم إرفاقه).\n\nمع تحيات،\nنظام تسوية شركة سمارت`;
+
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    };
+
+    // Fetch batches when switching to settle tab
+    useEffect(() => {
+        if (activeTab === 'settle') {
+            fetchBatches();
+        }
+    }, [activeTab]);
+
+    const applyOCR = (ocrData: any) => {
+        setEntryMode('manual');
+        if (ocrData.batchNumber) setValue('batchNumber', ocrData.batchNumber);
+        if (ocrData.approvalNumber) setValue('approvalNumber', ocrData.approvalNumber);
+        if (ocrData.rrn) setValue('referenceNumber', ocrData.rrn);
+        if (ocrData.last4Digits) setValue('last4Digits', ocrData.last4Digits);
+        if (ocrData.totalAmount) setValue('settledAmount', ocrData.totalAmount);
+
+        if (ocrData.date) {
+            const dParts = ocrData.date.split(/[-/]/);
+            const day = dParts[0].padStart(2, '0');
+            const month = dParts[1].padStart(2, '0');
+            const year = dParts[2].length === 2 ? `20${dParts[2]}` : dParts[2];
+            const tParts = (ocrData.time || '00:00').split(':');
+            const hour = (tParts[0] || '00').padStart(2, '0');
+            const minute = (tParts[1] || '00').padStart(2, '0');
+            setValue('settlementDate', `${year}-${month}-${day}T${hour}:${minute}`);
+        }
+    };
+
+    const handleOCRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setScanning(true);
+        const formData = new FormData();
+        formData.append('receipt', file);
+        try {
+            const res = await api.post('/ocr/scan', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            applyOCR(res.data.data);
+        } catch (err) {
+            alert('فشل قراءة الإيصال، يرجى الإدخال يدوياً');
+        } finally {
+            setScanning(false);
+        }
+    };
+
+    const onSubmit = async (data: SettlementFormValues) => {
+        try {
+            // Clean data
+            const payload = {
+                ...data,
+                totalAmount: data.settledAmount, // Sync if empty
+                netAmount: data.settledAmount,
+                referenceNumber: data.referenceNumber || `REF-${Date.now()}`,
+                branchId: localStorage.getItem('selectedBranchId') || undefined, // Attach Branch ID
+            };
+            await api.post('/settlements', payload);
+            alert('تم حفظ الإيصال بنجاح');
+            // Full reset to default values
+            reset({
+                settlementDate: new Date().toISOString().slice(0, 16),
+                serviceCategory: 'SMART',
+                bankName: 'BANQUE MISR',
+                fees: 0,
+                merchantCode: '',
+                merchantName: '',
+                subService: '',
+                settledAmount: 0,
+                approvalNumber: '',
+                batchNumber: '',
+                last4Digits: '',
+                referenceNumber: '',
+            });
+            fetchRecent();
+        } catch (err) {
+            alert('خطأ أثناء الحفظ');
+        }
+    };
+
+    return (
+        <div className="max-w-5xl mx-auto space-y-6 text-right" dir="rtl">
+            {/* Main Tabs */}
+            <div className="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+                <button
+                    onClick={() => setActiveTab('entry')}
+                    className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-lg font-bold transition-all ${activeTab === 'entry' ? 'bg-primary text-white shadow-md scale-[1.02]' : 'text-gray-500 hover:bg-gray-50'}`}
+                >
+                    <Plus className="w-5 h-5" />
+                    إدخال إيصال (جديد)
+                </button>
+                <button
+                    onClick={() => setActiveTab('settle')}
+                    className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-lg font-bold transition-all ${activeTab === 'settle' ? 'bg-primary text-white shadow-md scale-[1.02]' : 'text-gray-500 hover:bg-gray-50'}`}
+                >
+                    <CheckCircle2 className="w-5 h-5" />
+                    عمل تسوية (التقرير النهائي)
+                </button>
+            </div>
+
+            {activeTab === 'entry' ? (
+                <div className="grid grid-cols-12 gap-6">
+                    {/* Left: Entry Form */}
+                    <div className="col-span-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-xl font-black text-gray-800">بيانات الإيصال</h2>
+                            <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                                <button
+                                    onClick={() => setEntryMode('manual')}
+                                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${entryMode === 'manual' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
+                                >
+                                    إدخال يدوي
+                                </button>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${scanning ? 'bg-primary text-white animate-pulse' : 'text-gray-500 hover:bg-gray-200'}`}
+                                >
+                                    {scanning ? <Loader2 className="w-4 h-4 animate-spin inline ml-1" /> : <Zap className="w-4 h-4 inline ml-1" />}
+                                    مسح OCR
+                                </button>
+                            </div>
+                            <input type="file" ref={fileInputRef} onChange={handleOCRUpload} className="hidden" accept="image/*" />
+                        </div>
+
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="label-sm">التاريخ</label>
+                                    <input type="datetime-local" {...register('settlementDate')} className="input" />
+                                </div>
+                                <div>
+                                    <label className="label-sm">كود المخبز / التاجر</label>
+                                    <input type="text" {...register('merchantCode')} className="input" placeholder="مثلاً: 4897..." />
+                                    {errors.merchantCode && <p className="error-text">{errors.merchantCode.message}</p>}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="label-sm">اسم المخبز / التاجر</label>
+                                    <input type="text" {...register('merchantName')} className="input" placeholder="ادخل الاسم هنا" />
+                                    {errors.merchantName && <p className="error-text">{errors.merchantName.message}</p>}
+                                </div>
+                                <div>
+                                    <label className="label-sm">نوع الخدمة</label>
+                                    <select {...register('subService')} className="input">
+                                        <option value="">-- اختار نوع الخدمة --</option>
+                                        <option value="سداد قطع الغيار و مصاريف الصيانة">سداد قطع الغيار و مصاريف الصيانة</option>
+                                        <option value="سداد قيمة مبيعات الماكينات">سداد قيمة مبيعات الماكينات</option>
+                                        <option value="سداد اقساط المرابحة">سداد اقساط المرابحة</option>
+                                        <option value="سداد فروق التصنيع">سداد فروق التصنيع</option>
+                                        <option value="الغرامات (المخابز و التجار)">الغرامات (المخابز و التجار)</option>
+                                    </select>
+                                    {errors.subService && <p className="error-text">{errors.subService.message}</p>}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6 border-t pt-6">
+                                <div>
+                                    <label className="label-sm">المبلغ المسدد</label>
+                                    <div className="relative">
+                                        <input type="number" step="0.01" {...register('settledAmount', { valueAsNumber: true })} className="input text-2xl font-black text-primary" />
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">ج.م</span>
+                                    </div>
+                                    {errors.settledAmount && <p className="error-text">{errors.settledAmount.message}</p>}
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="label-sm">رقم الباتش</label>
+                                        <input type="text" {...register('batchNumber')} className="input" />
+                                    </div>
+                                    <div>
+                                        <label className="label-sm">رقم الموافقة</label>
+                                        <input type="text" {...register('approvalNumber')} className="input" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="label-sm">آخر 4 أرقام من البطاقة</label>
+                                    <input type="text" maxLength={4} {...register('last4Digits')} className="input font-mono text-center tracking-widest text-lg" placeholder="XXXX" />
+                                    {errors.last4Digits && <p className="error-text">{errors.last4Digits.message}</p>}
+                                </div>
+                                <div className="flex items-end">
+                                    <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-4 text-lg font-black shadow-lg shadow-primary/20">
+                                        {isSubmitting ? 'جاري الحفظ...' : 'حفظ الإيصال + إضافة جديد'}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Right: Recent Stats/Info */}
+                    <div className="col-span-4 space-y-6">
+                        <div className="bg-gray-900 text-white p-6 rounded-2xl shadow-xl">
+                            <h3 className="font-bold mb-4 opacity-70">آخر الإيصالات المضافة</h3>
+                            <div className="space-y-4">
+                                {recentSettlements.map((s, i) => (
+                                    <div key={i} className="flex justify-between items-center border-b border-white/10 pb-3 last:border-0">
+                                        <div>
+                                            <p className="font-bold">{s.merchantName || 'تاجر غير مسمى'}</p>
+                                            <p className="text-[10px] opacity-50">{new Date(s.settlementDate).toLocaleString('ar-EG')}</p>
+                                        </div>
+                                        <p className="font-black text-primary-light">{Number(s.netAmount).toLocaleString()} ج.م</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="bg-primary/5 border border-primary/20 p-6 rounded-2xl">
+                            <p className="text-sm text-primary font-bold mb-1">تعليمات:</p>
+                            <p className="text-xs text-gray-600 leading-relaxed">
+                                يمكنك استخدام المسح الضوئي (OCR) لإيصالات بنك مصر ليقوم النظام بملء التاريخ والباتش والموافقة والمبالغ تلقائياً.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                /* Tab 2: Settle / Report View - Grouped by Batch */
+                <div className="space-y-4">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold">تسوية الباتشات</h2>
+                                <p className="text-sm text-gray-500">المعاملات مجمعة حسب رقم الباتش</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <span className="flex items-center gap-1 text-xs text-yellow-600">
+                                    <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                    معلقة
+                                </span>
+                                <span className="flex items-center gap-1 text-xs text-green-600">
+                                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                    تمت التسوية
+                                </span>
+                            </div>
+                        </div>
+
+                        {batches.length === 0 ? (
+                            <p className="text-center text-gray-400 py-10">لا توجد معاملات بعد</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {batches.map((batch) => (
+                                    <div
+                                        key={batch.batchNumber}
+                                        className={`border rounded-xl overflow-hidden ${batch.isSettled ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}
+                                    >
+                                        {/* Batch Header */}
+                                        <div className={`p-4 flex justify-between items-center ${batch.isSettled ? 'bg-green-100' : 'bg-gray-50'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <Package className={`w-5 h-5 ${batch.isSettled ? 'text-green-600' : 'text-primary'}`} />
+                                                <div>
+                                                    <p className="font-bold text-lg">باتش #{batch.batchNumber}</p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {batch.transactions.length} معاملة | {new Date(batch.settlementDate).toLocaleDateString('ar-EG')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <p className="text-xl font-black text-primary">
+                                                    {batch.totalAmount.toLocaleString()} ج.م
+                                                </p>
+                                                {batch.isSettled ? (
+                                                    <span className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                                                        <CheckCircle2 className="w-4 h-4" />
+                                                        تمت التسوية
+                                                    </span>
+                                                ) : (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleDownloadPDF(batch.batchNumber)}
+                                                            className="btn-secondary px-3 py-2 text-sm flex items-center gap-1"
+                                                            title="عرض التقرير PDF"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                            PDF
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDownloadExcel(batch.batchNumber)}
+                                                            className="btn-secondary px-3 py-2 text-sm flex items-center gap-1 text-green-700 bg-green-50 hover:bg-green-100 border-green-200"
+                                                            title="تحميل Excel"
+                                                        >
+                                                            <FileSpreadsheet className="w-4 h-4" />
+                                                            Excel
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleEmailPDF(batch)}
+                                                            className="btn-secondary px-3 py-2 text-sm flex items-center gap-1"
+                                                            title="إرسال بالإيميل"
+                                                        >
+                                                            <Mail className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleSettleBatch(batch.batchNumber)}
+                                                            disabled={settling === batch.batchNumber}
+                                                            className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                                                        >
+                                                            {settling === batch.batchNumber ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                            ) : (
+                                                                <CheckCircle2 className="w-4 h-4" />
+                                                            )}
+                                                            تسوية الباتش
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Batch Transactions */}
+                                        <div className="divide-y divide-gray-100">
+                                            {batch.transactions.map((t: any, idx: number) => (
+                                                <div key={t.id} className="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-gray-400 text-sm w-6">{idx + 1}</span>
+                                                        <div>
+                                                            <p className="font-bold">{t.merchantName || t.merchantCode}</p>
+                                                            <p className="text-xs text-gray-400">{t.subService}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-6 text-sm">
+                                                        <span className="text-gray-500">موافقة: {t.approvalNumber}</span>
+                                                        <span className="text-gray-500">**** {t.last4Digits}</span>
+                                                        <span className="font-bold text-primary">{Number(t.settledAmount).toLocaleString()} ج.م</span>
+                                                        <button
+                                                            onClick={() => window.open(`/settlement/${t.id}/print`, '_blank')}
+                                                            className="p-1 text-gray-400 hover:text-blue-500 rounded-md hover:bg-blue-50 transition-colors"
+                                                            title="طباعة إيصال"
+                                                        >
+                                                            <Printer className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
