@@ -21,7 +21,15 @@ export class SettlementController {
             const { status, bankName, page, limit } = req.query;
             if (status) filters.status = status;
             if (bankName) filters.bankName = { contains: String(bankName), mode: 'insensitive' };
-            if (req.query.branchId && req.query.branchId !== 'undefined' && req.query.branchId !== 'null') filters.branchId = String(req.query.branchId);
+
+            const adminPass = req.headers['x-admin-password'];
+            const isAdmin = adminPass && adminPass === process.env.ADMIN_PASSWORD;
+
+            if (req.query.branchId && req.query.branchId !== 'undefined' && req.query.branchId !== 'null' && req.query.branchId !== 'all') {
+                filters.branchId = String(req.query.branchId);
+            } else if (!isAdmin) {
+                filters.id = 'force-empty-if-no-branch';
+            }
 
             const result = await settlementService.listSettlements(
                 filters,

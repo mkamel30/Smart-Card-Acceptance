@@ -143,9 +143,20 @@ export default function SelectBranch() {
                                     disabled={creating}
                                     className="flex-1 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
                                 >
-                                    {creating ? 'جاري الإضافة...' : 'إضافة'}
+                                    {creating ? 'جاري الإضافة...' : 'إضافة فرع'}
                                 </button>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    localStorage.removeItem('selectedBranchId');
+                                    localStorage.setItem('selectedBranchName', 'كل الفروع');
+                                    window.location.href = '/';
+                                }}
+                                className="w-full py-2 mt-2 text-xs font-bold text-primary border border-primary/20 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors"
+                            >
+                                عرض كل الفروع (Global View) 🌍
+                            </button>
                         </form>
                     )}
                 </div>
