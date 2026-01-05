@@ -19,6 +19,40 @@ export interface ExtractedReceiptData {
 export class OCRService {
     // ...
 
+    async uploadImage(file: Express.Multer.File): Promise<string> {
+        let uploadBuffer = file.buffer;
+        let contentType = file.mimetype;
+
+        try {
+            uploadBuffer = await sharp(file.buffer)
+                .resize({ width: 1500, withoutEnlargement: true })
+                .grayscale()
+                .sharpen()
+                .normalize()
+                .toFormat('png')
+                .toBuffer();
+            contentType = 'image/png';
+        } catch (e) {
+            console.warn('Image optimization failed', e);
+        }
+
+        const fileName = `receipts/${Date.now()}_compressed.png`;
+        const { data, error } = await supabase.storage
+            .from('receipts')
+            .upload(fileName, uploadBuffer, {
+                contentType,
+                upsert: false
+            });
+
+        if (error) {
+            console.error('Supabase Upload Error:', error);
+            throw new Error('Upload failed');
+        }
+
+        const urlData = supabase.storage.from('receipts').getPublicUrl(fileName);
+        return urlData.data.publicUrl;
+    }
+
     async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string }> {
 
         let uploadBuffer = file.buffer;

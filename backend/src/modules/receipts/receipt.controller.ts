@@ -11,7 +11,18 @@ export class ReceiptController {
                 return res.status(400).json({ message: 'No file uploaded' });
             }
 
-            const receipt = await receiptService.processOCR(file, settlementId);
+            let manualData = null;
+            if (req.body.ocrData) {
+                try {
+                    manualData = typeof req.body.ocrData === 'string'
+                        ? JSON.parse(req.body.ocrData)
+                        : req.body.ocrData;
+                } catch (e) {
+                    console.warn('Failed to parse manual OCR data', e);
+                }
+            }
+
+            const receipt = await receiptService.processOCR(file, settlementId, manualData);
             res.status(200).json(receipt);
         } catch (error) {
             next(error);
