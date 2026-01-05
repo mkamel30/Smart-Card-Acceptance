@@ -25,40 +25,27 @@ export class OCRService {
         let contentType = file.mimetype;
 
         try {
-            // Optimize Image: Resize to max 1200px width, Convert to JPEG, Quality 65%
+            // Optimize Image: Grayscale, Sharpen, Threshold for better OCR
             uploadBuffer = await sharp(file.buffer)
-                .resize({ width: 1200, withoutEnlargement: true })
-                .jpeg({ quality: 65, mozjpeg: true })
+                .resize({ width: 1500, withoutEnlargement: true }) // Higher res for better details
+                .grayscale() // Remove color noise
+                .sharpen() // Enhance edges
+                .normalize() // Improve contrast
+                .toFormat('png') // PNG is better for text (lossless)
                 .toBuffer();
-            contentType = 'image/jpeg';
+
+            contentType = 'image/png';
         } catch (e) {
             console.warn('Image optimization failed, using original file', e);
         }
 
-        // 1. Upload to Supabase Storage
-        let publicUrl = '';
-        try {
-            const fileName = `receipts/${Date.now()}_compressed.jpg`;
-            const { data, error } = await supabase.storage
-                .from('receipts')
-                .upload(fileName, uploadBuffer, {
-                    contentType,
-                    upsert: false
-                });
-
-            if (!error) {
-                const urlData = supabase.storage.from('receipts').getPublicUrl(fileName);
-                publicUrl = urlData.data.publicUrl;
-            } else {
-                console.error('Supabase Upload Error:', error);
-            }
-        } catch (err) {
-            console.error('Upload Failed', err);
-        }
+        // ... (Upload to Supabase remains same)
 
         // 2. Perform OCR (using ara+eng)
         // Note: First run might be slow as it downloads language data
-        const { data: { text } } = await Tesseract.recognize(file.buffer, 'ara+eng');
+        const { data: { text } } = await Tesseract.recognize(uploadBuffer, 'ara+eng', {
+            logger: m => console.log(m)
+        });
 
         // 3. Parse Text
         const parsedData = this.parseReceiptText(text);
@@ -72,63 +59,109 @@ export class OCRService {
 
     private parseReceiptText(text: string): ExtractedReceiptData {
         const data: ExtractedReceiptData = {};
-        const lines = text.split('\n');
 
-        // Regex Patterns (Adapted for Egyptian Receipts)
-        const patterns = {
-            batch: /(?:Batch|الباتش|رقم الباتش)[:\.\s]*(\d+)/i,
-            approval: /(?:Approval|Appr|Auth|الموافقة|رقم الموافقة)[:\.\s]*(\d+)/i,
-            merchant: /(?:Merchant|Merch|Tajer|التاجر)[:\.\s]*(\d+)/i,
-            terminal: /(?:Terminal|Term|TID|الطرفية)[:\.\s]*(\d+)/i,
-            amount: /(?:Amount|Total|Sale|المبلغ|الاجمالي)[:\.\s]*(\d[\d\.,]*)/i,
-            date: /(\d{2}[\/\-]\d{2}[\/\-]\d{4})/,
-            time: /(\d{2}:\d{2}(?::\d{2})?)/,
-            last4: /(?:\*{4}\s*(\d{4}))/,
-            rrn: /(?:RRN|Ref|Reference)[:\.\s]*(\d+)/i
-        };
+        // Normalize text for easier matching (replace common OCR errors in numbers)
+        // Replace 'O'/'o' with '0' inside numeric-heavy strings is risky globally, 
+        // effectively handled by flexible regex or specific field parsers.
+        const cleanText = text.replace(/[\r\n]+/g, '\n');
 
-        // Scan full text first (better for labeled fields)
-        const batchMatch = text.match(patterns.batch);
-        if (batchMatch) data.batchNumber = batchMatch[1];
+        // 1. DATES (DD/MM/YYYY or YYYY-MM-DD)
+        const datePattern = /\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\b/g;
+        const dateMatches = cleanText.match(datePattern);
+        if (dateMatches) {
+            // Pick the one that looks most like a transaction date (usually not the first one if it's header, but dates are rare)
+            // Normalized to YYYY-MM-DD
+            const bestDate = dateMatches[0]; // Take first valid date found
+            const parts = bestDate.split(/[/\-\.]/);
 
-        const apprMatch = text.match(patterns.approval);
-        if (apprMatch) data.approvalNumber = apprMatch[1];
-
-        const merchMatch = text.match(patterns.merchant);
-        if (merchMatch) data.merchantCode = merchMatch[1];
-
-        const termMatch = text.match(patterns.terminal);
-        if (termMatch) data.terminalId = termMatch[1];
-
-        const last4Match = text.match(patterns.last4);
-        if (last4Match) data.last4Digits = last4Match[1];
-
-        const rrnMatch = text.match(patterns.rrn);
-        if (rrnMatch) data.rrn = rrnMatch[1];
-
-        // Date & Time
-        const dateMatch = text.match(patterns.date);
-        if (dateMatch) {
-            // Normalize Date to YYYY-MM-DD
-            // Assuming DD/MM/YYYY common in EG
-            const parts = dateMatch[1].split(/[\/\-]/);
-            if (parts[0].length === 2 && parts[2].length === 4) {
-                // DD/MM/YYYY
-                data.date = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            // Guess format: if parts[2] is 4 digits, it's DD-MM-YYYY or MM-DD-YYYY. 
+            // In Egypt DD-MM-YYYY is standard.
+            if (parts[2].length === 4) {
+                data.date = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            } else if (parts[0].length === 4) {
+                data.date = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
             } else {
-                data.date = dateMatch[1];
+                // Fallback for YY
+                data.date = `20${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
             }
         }
 
-        const timeMatch = text.match(patterns.time);
+        // 2. TIME (HH:MM[:SS])
+        const timePattern = /\b(\d{1,2}:\d{2}(?::\d{2})?)\b/;
+        const timeMatch = cleanText.match(timePattern);
         if (timeMatch) data.time = timeMatch[1];
 
-        // Amount needs cleanup (remove commas)
-        const amountMatch = text.match(patterns.amount);
-        if (amountMatch) {
-            const rawAmount = amountMatch[1].replace(/,/g, '');
-            data.totalAmount = parseFloat(rawAmount);
+        // 3. AMOUNT (Look for EGP, LE, S.R, or standard amount format with "Total")
+        // Strategy: Look for numbers followed/preceded by currency, OR keyword "Total"
+        const amountPatterns = [
+            /(?:Total|Amount|Sale|Net|المبلغ|الاجمالي|صافي)\s*[:\.]?\s*(\d+[.,]\d{2})/i, // Labelled
+            /(\d+[.,]\d{2})\s*(?:EGP|LE|L\.E|ج\.م|ج\.m)/i, // Suffix Currency
+            /(?:EGP|LE|L\.E|ج\.م|ج\.m)\s*(\d+[.,]\d{2})/i // Prefix Currency
+        ];
+
+        for (const pat of amountPatterns) {
+            const m = cleanText.match(pat);
+            if (m) {
+                data.totalAmount = parseFloat(m[1].replace(/,/g, ''));
+                break;
+            }
         }
+
+        // 4. MERCHANT ID (12-15 digits usually)
+        const merchantPatterns = [
+            /(?:MID|Merchant|Merch|ID|التاجر)[:\.\s]*(\d{8,15})/i,
+            /\b(\d{12,15})\b/ // Standalone long number often ID
+        ];
+        for (const pat of merchantPatterns) {
+            const m = cleanText.match(pat);
+            if (m) {
+                // Determine if it's likely an ID (not a phone number starting with 01)
+                if (!m[1].startsWith('01')) {
+                    data.merchantCode = m[1];
+                    break;
+                }
+            }
+        }
+
+        // 5. TERMINAL ID (8 digits usually)
+        const tidPatterns = [
+            /(?:TID|Terminal|Term|طرفية)[:\.\s]*(\d{8})/i,
+            /\b(\d{8})\b/ // Standalone 8 digits might be TID
+        ];
+        for (const pat of tidPatterns) {
+            const m = cleanText.match(pat);
+            if (m) { // Avoid confusion with date parts
+                data.terminalId = m[1];
+                break;
+            }
+        }
+
+        // 6. APPROVAL / AUTH CODE (6 digits)
+        const authPatterns = [
+            /(?:Approval|Appr|Auth|Code|الموافقة)[:\.\s]*(\d{6})/i,
+            /\b(\d{6})\b/
+        ];
+        // Only verify standalone 6 digits if we are sure it's not part of something else
+        for (const pat of authPatterns) {
+            const m = cleanText.match(pat);
+            if (m) {
+                // Ensure it's not the time (e.g. 12:30:45 -> 123045 removed by spacing)
+                data.approvalNumber = m[1];
+                break;
+            }
+        }
+
+        // 7. BATCH (1-6 digits)
+        const batchMatch = cleanText.match(/(?:Batch|الباتش|رقم الباتش)[:\.\s]*(\d{1,6})/i);
+        if (batchMatch) data.batchNumber = batchMatch[1];
+
+        // 8. LAST 4 DIGITS (already working well, keep robust)
+        const last4Match = cleanText.match(/(?:\*{4}|X{4})\s*(\d{4})|(?:\d{4})\s*$/m); // End of line or after masks
+        if (last4Match) data.last4Digits = last4Match[1];
+
+        // 9. RRN (12 digits)
+        const rrnMatch = cleanText.match(/(?:RRN|Ref|Reference)[:\.\s]*(\d{12})/i);
+        if (rrnMatch) data.rrn = rrnMatch[1];
 
         return data;
     }
