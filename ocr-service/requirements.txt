@@ -1,4 +1,7 @@
-easyocr
+paddleocr
+paddlepaddle
 fastapi
 uvicorn
 python-multipart
+opencv-python
+numpy
