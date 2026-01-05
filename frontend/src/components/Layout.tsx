@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FilePlus, ScrollText } from 'lucide-react';
+import { LayoutDashboard, FilePlus, ScrollText, Settings, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useAdmin } from '../context/AdminContext';
+import AdminAuthModal from './AdminAuthModal';
 
 function cn(...inputs: any[]) {
     return twMerge(clsx(inputs));
@@ -9,6 +12,8 @@ function cn(...inputs: any[]) {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
+    const { isAdmin, logout } = useAdmin();
+    const [isAuthModalOpen, setAuthModalOpen] = useState(false);
 
     const navItems = [
         { name: 'لوحة التحكم', path: '/', icon: LayoutDashboard },
@@ -18,6 +23,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="flex min-h-screen bg-gray-50 font-sans" dir="rtl">
+            <AdminAuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setAuthModalOpen(false)}
+            />
+
             {/* Sidebar */}
             <aside className="w-64 bg-white border-l border-gray-200">
                 <div className="h-16 flex items-center px-6 border-b border-gray-200">
@@ -49,10 +59,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Main Content */}
             <main className="flex-1">
-                <header className="h-16 bg-white border-b border-gray-200 flex items-center px-8">
+                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
                     <h1 className="text-xl font-semibold">
                         {navItems.find(i => i.path === location.pathname)?.name || 'النظام'}
                     </h1>
+
+                    <div>
+                        {isAdmin ? (
+                            <button
+                                onClick={logout}
+                                className="flex items-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors"
+                            >
+                                <LogOut className="w-5 h-5" />
+                                <span className="font-bold">خروج مشرف</span>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => setAuthModalOpen(true)}
+                                className="text-gray-400 hover:text-primary transition-colors p-2 rounded-full hover:bg-gray-100"
+                            >
+                                <Settings className="w-6 h-6" />
+                            </button>
+                        )}
+                    </div>
                 </header>
                 <div className="p-8">
                     {children}

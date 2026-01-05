@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '@/api/client';
-import { Printer, ArrowRight } from 'lucide-react';
+import { Printer, ArrowRight, Trash2 } from 'lucide-react';
+import { useAdmin } from '@/context/AdminContext';
 
 interface Transaction {
     id: string;
@@ -22,6 +23,7 @@ interface BatchData {
 
 export default function BatchReport() {
     const { batchNumber } = useParams();
+    const { isAdmin } = useAdmin();
     const [batch, setBatch] = useState<BatchData | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -118,7 +120,8 @@ export default function BatchReport() {
                             <th className="px-4 py-3">اسم التاجر</th>
                             <th className="px-4 py-3">الخدمة</th>
                             <th className="px-4 py-3">رقم الموافقة</th>
-                            <th className="px-4 py-3 rounded-tl-lg text-left">المبلغ</th>
+                            <th className="px-4 py-3 text-left">المبلغ</th>
+                            {isAdmin && <th className="px-4 py-3 rounded-tl-lg text-center print:hidden">إجراءات</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -132,6 +135,31 @@ export default function BatchReport() {
                                 <td className="px-4 py-3 font-bold text-left" dir="ltr">
                                     {Number(t.settledAmount).toLocaleString()}
                                 </td>
+                                {isAdmin && (
+                                    <td className="px-4 py-3 text-center print:hidden">
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm('هل أنت متأكد من حذف هذا السجل؟ لا يمكن التراجع.')) {
+                                                    try {
+                                                        await api.delete(`/settlements/${t.id}`);
+                                                        // Optimistic or Refetch
+                                                        setBatch(prev => prev ? {
+                                                            ...prev,
+                                                            transactions: prev.transactions.filter(tr => tr.id !== t.id),
+                                                            totalAmount: prev.totalAmount - Number(t.settledAmount)
+                                                        } : null);
+                                                    } catch (e) {
+                                                        alert('فشل الحذف');
+                                                    }
+                                                }
+                                            }}
+                                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                                            title="حذف"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
