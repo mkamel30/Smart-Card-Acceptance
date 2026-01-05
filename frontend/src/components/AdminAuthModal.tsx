@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 
 interface AdminAuthModalProps {
