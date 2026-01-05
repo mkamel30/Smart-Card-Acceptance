@@ -53,6 +53,12 @@ app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
 });
 
+app.get('/api/info', (req, res) => {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    res.json({ ip, userAgent });
+});
+
 import path from 'path';
 import fs from 'fs';
 
