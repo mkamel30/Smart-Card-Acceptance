@@ -407,91 +407,121 @@ export default function BranchDashboard() {
                     <h3 className="text-lg font-bold mb-6 text-gray-800">الحالة الراهنة</h3>
                     <div className="flex-1 flex flex-col items-center justify-center">
                         <div className="h-64 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={summary?.statusBreakdown || []}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="count"
-                                        label={({ status, percent }: any) => `${status} ${(percent * 100).toFixed(0)}%`}
-                                    >
-                                        {(summary?.statusBreakdown || []).map((_entry: any, index: number) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                            {loading ? (
+                                <div className="h-full flex items-center justify-center text-gray-400">
+                                    <RefreshCw className="w-6 h-6 animate-spin" />
+                                </div>
+                            ) : (!summary?.statusBreakdown || summary.statusBreakdown.length === 0) ? (
+                                <div className="h-full flex items-center justify-center text-gray-400 font-medium">
+                                    لا توجد بيانات
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={summary?.statusBreakdown || []}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="count"
+                                            label={({ status, percent }: any) => `${status} ${(percent * 100).toFixed(0)}%`}
+                                        >
+                                            {(summary?.statusBreakdown || []).map((_entry: any, index: number) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                                    </PieChart>
                                 </PieChart>
                             </ResponsiveContainer>
-                        </div>
+                            )}
                     </div>
                 </div>
             </div>
+        </div>
 
-            {/* Charts Row 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-w-0">
-                    <h3 className="text-lg font-bold mb-6 text-gray-800">أداء الفروع (الصافي)</h3>
-                    <div className="h-80 w-full min-w-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={charts?.byBranch || []} layout="vertical">
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
-                                <XAxis type="number" hide />
-                                <YAxis
-                                    dataKey="branchName"
-                                    type="category"
-                                    tick={{ fontSize: 11, fontWeight: 'bold', fill: '#4b5563' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                    width={100}
-                                />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Bar
-                                    dataKey="total"
-                                    fill="#6366f1"
-                                    radius={[0, 8, 8, 0]}
-                                    barSize={20}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
+            {/* Charts Row 2 */ }
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-w-0">
+            <h3 className="text-lg font-bold mb-6 text-gray-800">أداء الفروع (الصافي)</h3>
+            <div className="h-80 w-full min-w-0">
+                {loading ? (
+                    <div className="h-full flex items-center justify-center text-gray-400">
+                        <RefreshCw className="w-6 h-6 animate-spin" />
                     </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-w-0">
-                    <h3 className="text-lg font-bold mb-6 text-gray-800">توزيع البنوك</h3>
-                    <div className="h-80 w-full min-w-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={charts?.byBank || []}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                                <XAxis
-                                    dataKey="bankName"
-                                    tick={{ fontSize: 12, fontWeight: 'bold', fill: '#4b5563' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <YAxis hide />
-                                <Tooltip
-                                    cursor={{ fill: 'transparent' }}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Bar
-                                    dataKey="total"
-                                    fill="#10b981"
-                                    radius={[8, 8, 0, 0]}
-                                    barSize={40}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
+                ) : (!charts?.byBranch || charts.byBranch.length === 0) ? (
+                    <div className="h-full flex items-center justify-center text-gray-400 font-medium">
+                        لا توجد بيانات
                     </div>
-                </div>
+                ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={charts?.byBranch || []} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
+                            <XAxis type="number" hide />
+                            <YAxis
+                                dataKey="branchName"
+                                type="category"
+                                tick={{ fontSize: 11, fontWeight: 'bold', fill: '#4b5563' }}
+                                axisLine={false}
+                                tickLine={false}
+                                width={100}
+                            />
+                            <Tooltip
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            />
+                            <Bar
+                                dataKey="total"
+                                fill="#6366f1"
+                                radius={[0, 8, 8, 0]}
+                                barSize={20}
+                            />
+                        </BarChart>
+                    </ResponsiveContainer>
             </div>
+        </div>
 
-            {/* Transactions Table */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-w-0">
+            <h3 className="text-lg font-bold mb-6 text-gray-800">توزيع البنوك</h3>
+            <div className="h-80 w-full min-w-0">
+                {loading ? (
+                    <div className="h-full flex items-center justify-center text-gray-400">
+                        <RefreshCw className="w-6 h-6 animate-spin" />
+                    </div>
+                ) : (!charts?.byBank || charts.byBank.length === 0) ? (
+                    <div className="h-full flex items-center justify-center text-gray-400 font-medium">
+                        لا توجد بيانات
+                    </div>
+                ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={charts?.byBank || []}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                            <XAxis
+                                dataKey="bankName"
+                                tick={{ fontSize: 12, fontWeight: 'bold', fill: '#4b5563' }}
+                                axisLine={false}
+                                tickLine={false}
+                            />
+                            <YAxis hide />
+                            <Tooltip
+                                cursor={{ fill: 'transparent' }}
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            />
+                            <Bar
+                                dataKey="total"
+                                fill="#10b981"
+                                radius={[8, 8, 0, 0]}
+                                barSize={40}
+                            />
+                        </BarChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
+        </div>
+    </div>
+
+    {/* Transactions Table */ }
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="text-lg font-bold text-gray-800">أحدث المعاملات</h3>
