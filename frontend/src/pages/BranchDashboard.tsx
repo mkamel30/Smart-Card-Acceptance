@@ -281,7 +281,6 @@ export default function BranchDashboard() {
                                         outerRadius={80}
                                         paddingAngle={5}
                                         dataKey="count"
-                                        dataKey="count"
                                         label={({ status, percent }: any) => `${status} ${(percent * 100).toFixed(0)}%`}
                                     >
                                         {(summary?.statusBreakdown || []).map((_entry: any, index: number) => (
