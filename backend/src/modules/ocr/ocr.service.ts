@@ -174,9 +174,10 @@ export class OCRService {
         const batchMatch = cleanText.match(/(?:Batch|الباتش|رقم الباتش)[:\.\s]*(\d{1,6})/i);
         if (batchMatch) data.batchNumber = batchMatch[1];
 
-        // 8. LAST 4 DIGITS (already working well, keep robust)
-        const last4Match = cleanText.match(/(?:\*{4}|X{4})\s*(\d{4})|(?:\d{4})\s*$/m); // End of line or after masks
-        if (last4Match) data.last4Digits = last4Match[1];
+        // 8. LAST 4 DIGITS (Updated to be more flexible with masks like * * * * or x x x x)
+        // Matches 4 of (*, x, X, .) followed by 4 digits
+        const last4Match = cleanText.match(/(?:[\*xX\.]\s*){4}\s*(\d{4})|(?:\d{4})\s*$/m);
+        if (last4Match) data.last4Digits = last4Match[1] || last4Match[0].trim();
 
         // 9. RRN (12 digits)
         const rrnMatch = cleanText.match(/(?:RRN|Ref|Reference)[:\.\s]*(\d{12})/i);
