@@ -39,7 +39,26 @@ export class OCRService {
             console.warn('Image optimization failed, using original file', e);
         }
 
-        // ... (Upload to Supabase remains same)
+        // 1. Upload to Supabase Storage
+        let publicUrl = '';
+        try {
+            const fileName = `receipts/${Date.now()}_compressed.png`; // use png extension to match content type
+            const { data, error } = await supabase.storage
+                .from('receipts')
+                .upload(fileName, uploadBuffer, {
+                    contentType,
+                    upsert: false
+                });
+
+            if (!error) {
+                const urlData = supabase.storage.from('receipts').getPublicUrl(fileName);
+                publicUrl = urlData.data.publicUrl;
+            } else {
+                console.error('Supabase Upload Error:', error);
+            }
+        } catch (err) {
+            console.error('Upload Failed', err);
+        }
 
         // 2. Perform OCR (using ara+eng)
         // Note: First run might be slow as it downloads language data
