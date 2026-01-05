@@ -4,7 +4,7 @@
     "private": true,
     "scripts": {
         "postinstall": "npm run build",
-        "build": "cd backend && npm install && npm run build && npx prisma generate",
+        "build": "cd backend && npm install --include=dev && npm run build && npx prisma generate",
         "start": "cd backend && npm start"
     },
     "engines": {
