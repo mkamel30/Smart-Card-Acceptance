@@ -12,13 +12,15 @@ function cn(...inputs: any[]) {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
-    const { isAdmin, logout } = useAdmin();
+    const { isAdmin, user, logout } = useAdmin();
     const [isAuthModalOpen, setAuthModalOpen] = useState(false);
     const [isSidebarOpen, setSidebarOpen] = useState(false);
 
+    const isMultiBranch = isAdmin || (user?.role === 'BRANCH_MANAGER' && user?.branches && user.branches.length > 1);
+
     const navItems = [
-        { name: 'لوحة التحكم', path: '/', icon: LayoutDashboard },
-        { name: 'تحليلات الفروع', path: '/branch-dashboard', icon: LayoutDashboard },
+        { name: 'الرئيسية', path: '/', icon: LayoutDashboard },
+        { name: isMultiBranch ? 'إدارة الفروع' : 'لوحة المعلومات', path: '/branch-dashboard', icon: LayoutDashboard },
         { name: 'تسوية جديدة', path: '/settlement/new', icon: FilePlus },
         { name: 'سجل الباتشات', path: '/batches', icon: ScrollText },
     ];
@@ -97,14 +99,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {isAdmin ? (
-                            <button
-                                onClick={logout}
-                                className="flex items-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors text-sm font-bold"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                <span className="hidden sm:inline">خروج مشرف</span>
-                            </button>
+                        {isAdmin || user ? (
+                            <div className="flex items-center gap-3">
+                                {user && (
+                                    <span className="text-sm font-bold text-gray-600 hidden md:block">
+                                        {user.username}
+                                    </span>
+                                )}
+                                <button
+                                    onClick={logout}
+                                    className="flex items-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors text-sm font-bold"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    <span className="hidden sm:inline">خروج</span>
+                                </button>
+                            </div>
                         ) : (
                             <button
                                 onClick={() => setAuthModalOpen(true)}
