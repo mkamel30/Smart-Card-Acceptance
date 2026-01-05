@@ -48,6 +48,7 @@ export class SettlementService {
                 notes: data.notes,
                 createdBy: userId,
                 status: 'PENDING',
+                branchId: data.branchId,
             } as any, // Cast to any to bypass Prisma client validation in IDE
             include: {
                 receipt: true,
@@ -106,6 +107,7 @@ export class SettlementService {
                 ...data,
                 settlementDate: data.settlementDate ? new Date(data.settlementDate) : undefined,
                 netAmount,
+                branchId: data.branchId,
             },
         })) as Settlement;
     }

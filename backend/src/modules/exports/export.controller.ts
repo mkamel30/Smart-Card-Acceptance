@@ -8,6 +8,7 @@ export class ExportController {
             const filters: any = {};
             if (status) filters.status = status;
             if (bankName) filters.bankName = { contains: String(bankName), mode: 'insensitive' };
+            if (req.query.branchId && req.query.branchId !== 'undefined' && req.query.branchId !== 'null') filters.branchId = String(req.query.branchId);
 
             const buffer = await exportService.exportToExcel(filters);
 
@@ -37,7 +38,8 @@ export class ExportController {
             const { batchNumber } = req.params;
             // Lazy import to avoid circular dependencies if any, though likely not needed here but safe
             const { default: settlementService } = await import('../settlements/settlement.service');
-            const batches = await settlementService.getSettlementsByBatch();
+            const branchId = req.query.branchId ? String(req.query.branchId) : undefined;
+            const batches = await settlementService.getSettlementsByBatch(branchId);
             const batch = batches.find((b: any) => b.batchNumber === batchNumber);
 
             if (!batch) {
