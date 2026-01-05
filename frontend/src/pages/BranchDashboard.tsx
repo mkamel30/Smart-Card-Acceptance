@@ -64,12 +64,12 @@ export default function BranchDashboard() {
         try {
             const effectiveBranches = overrideBranches || selectedBranches;
 
-            const params: any = {
-                dateFrom,
-                dateTo,
-                status,
-                bankName: bank
-            };
+            const params: any = {};
+
+            if (dateFrom) params.dateFrom = dateFrom;
+            if (dateTo) params.dateTo = dateTo;
+            if (status) params.status = status;
+            if (bank) params.bankName = bank;
 
             if (effectiveBranches && effectiveBranches.length > 0) {
                 params.branches = effectiveBranches.map(b => b.value);
