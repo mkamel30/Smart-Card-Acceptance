@@ -4,7 +4,7 @@ import { prisma } from '../../server';
 export class BranchController {
 
     // Public: List all branches for login screen
-    async getAll(req: Request, res: Response) {
+    async getAll(_req: Request, res: Response) {
         try {
             const branches = await prisma.branch.findMany({
                 orderBy: { name: 'asc' }

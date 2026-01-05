@@ -38,7 +38,7 @@ app.use('/api/pdf', pdfRoutes);
 app.use('/api/uploads', express.static('uploads'));
 
 // Basic health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
 });
 
@@ -54,7 +54,7 @@ if (fs.existsSync(frontendPath)) {
 // API Routes (Ensure these are defined)
 
 // Root Health Check (Important for Render)
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     res.status(200).json({ status: 'active', message: 'Card Settlement API is running' });
 });
 

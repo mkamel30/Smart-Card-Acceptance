@@ -37,7 +37,7 @@ export class OCRService {
         }
 
         const fileName = `receipts/${Date.now()}_v.webp`;
-        const { data, error } = await supabase.storage
+        const { error } = await supabase.storage
             .from('receipts')
             .upload(fileName, storageBuffer, {
                 contentType,
@@ -82,7 +82,7 @@ export class OCRService {
         let publicUrl = '';
         try {
             const fileName = `receipts/${Date.now()}_s.webp`;
-            const { data, error } = await supabase.storage
+            const { error } = await supabase.storage
                 .from('receipts')
                 .upload(fileName, storageBuffer, {
                     contentType: 'image/webp',

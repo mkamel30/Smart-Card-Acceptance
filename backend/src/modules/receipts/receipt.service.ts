@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import prisma from '../../config/database';
 import ocrService from '../ocr/ocr.service';
 
