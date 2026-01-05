@@ -60,22 +60,28 @@ export class OCRService {
         let storageBuffer = file.buffer;
 
         try {
-            // 1. Prepare Buffer for OCR (High Quality PNG, Grayscale, Sharpened)
-            ocrBuffer = await sharp(file.buffer)
+            const image = sharp(file.buffer);
+            const metadata = await image.metadata();
+
+            console.log(`Processing image for OCR: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
+
+            // 1. Prepare Buffer for OCR (High Quality PNG, Grayscale, Normalized)
+            ocrBuffer = await image
+                .rotate() // Auto-rotate based on EXIF
                 .resize({ width: 1500, withoutEnlargement: true })
                 .grayscale()
-                .sharpen()
                 .normalize()
                 .toFormat('png')
                 .toBuffer();
 
             // 2. Prepare Buffer for Storage (Compressed WebP)
             storageBuffer = await sharp(file.buffer)
+                .rotate()
                 .resize({ width: 1000, withoutEnlargement: true })
                 .webp({ quality: 75 })
                 .toBuffer();
         } catch (e) {
-            console.warn('Image optimization failed, using original file for both', e);
+            console.warn('Image optimization failed, using original file', e);
         }
 
         // 1. Upload to Supabase Storage
@@ -151,6 +157,8 @@ export class OCRService {
             } catch (err) {
                 console.warn('Google Vision failed:', err);
             }
+        } else if (!GOOGLE_API_KEY && !text) {
+            console.log('Skipping Google Vision OCR: GOOGLE_API_KEY is not set');
         }
 
         // --- Step C: Fallback to Tesseract.js (Free & Built-in) ---
@@ -191,29 +199,23 @@ export class OCRService {
 
     private parseReceiptText(text: string): ExtractedReceiptData {
         const data: ExtractedReceiptData = {};
-
-        // Normalize text for easier matching (replace common OCR errors in numbers)
-        // Replace 'O'/'o' with '0' inside numeric-heavy strings is risky globally, 
-        // effectively handled by flexible regex or specific field parsers.
         const cleanText = text.replace(/[\r\n]+/g, '\n');
+
+        // Create a version of text without spaces between digits for more robust matching
+        // "1 2 3 . 4 5" -> "123.45"
+        const digitFocusText = cleanText.replace(/(\d)\s+(?=\d|[.,]\d)/g, '$1');
 
         // 1. DATES (DD/MM/YYYY or YYYY-MM-DD)
         const datePattern = /\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\b/g;
-        const dateMatches = cleanText.match(datePattern);
+        const dateMatches = digitFocusText.match(datePattern);
         if (dateMatches) {
-            // Pick the one that looks most like a transaction date (usually not the first one if it's header, but dates are rare)
-            // Normalized to YYYY-MM-DD
-            const bestDate = dateMatches[0]; // Take first valid date found
+            const bestDate = dateMatches[0];
             const parts = bestDate.split(/[/\-\.]/);
-
-            // Guess format: if parts[2] is 4 digits, it's DD-MM-YYYY or MM-DD-YYYY. 
-            // In Egypt DD-MM-YYYY is standard.
             if (parts[2].length === 4) {
                 data.date = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
             } else if (parts[0].length === 4) {
                 data.date = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
             } else {
-                // Fallback for YY
                 data.date = `20${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
             }
         }
@@ -223,81 +225,58 @@ export class OCRService {
         const timeMatch = cleanText.match(timePattern);
         if (timeMatch) data.time = timeMatch[1];
 
-        // 3. AMOUNT (Look for EGP, LE, S.R, or standard amount format with "Total")
-        // Strategy: Look for numbers followed/preceded by currency, OR keyword "Total"
+        // 3. AMOUNT
         const amountPatterns = [
-            /(?:Total|Amount|Sale|Net|المبلغ|الاجمالي|صافي)\s*[:\.]?\s*(\d+[.,]\d{2})/i, // Labelled
-            /(\d+[.,]\d{2})\s*(?:EGP|LE|L\.E|ج\.م|ج\.m)/i, // Suffix Currency
-            /(?:EGP|LE|L\.E|ج\.م|ج\.m)\s*(\d+[.,]\d{2})/i // Prefix Currency
+            /(?:Total|Amount|Sale|Net|المبلغ|الاجمالي|صافي)\s*[:\.]?\s*(\d+[.,]\d{2})/i,
+            /(\d+[.,]\d{2})\s*(?:EGP|LE|L\.E|ج\.م|ج\.m)/i,
+            /(?:EGP|LE|L\.E|ج\.م|ج\.m)\s*(\d+[.,]\d{2})/i
         ];
 
         for (const pat of amountPatterns) {
-            const m = cleanText.match(pat);
+            const m = digitFocusText.match(pat);
             if (m) {
                 data.totalAmount = parseFloat(m[1].replace(/,/g, ''));
                 break;
             }
         }
 
-        // 4. MERCHANT ID (12-15 digits usually)
-        const merchantPatterns = [
-            /(?:MID|Merchant|Merch|ID|التاجر)[:\.\s]*(\d{8,15})/i,
-            /\b(\d{10,15})\b/ // Standalone 10-15 digits often ID
-        ];
-        for (const pat of merchantPatterns) {
-            const m = cleanText.match(pat);
-            if (m) {
-                // Determine if it's likely an ID (not a phone number starting with 01)
-                if (!m[1].startsWith('01')) {
-                    data.merchantCode = m[1];
-                    break;
-                }
-            }
+        // 4. MERCHANT ID (MID)
+        const merchantMatch = digitFocusText.match(/(?:MID|Merchant|Merch|ID|التاجر)[:\.\s]*(\d{8,15})/i);
+        if (merchantMatch) {
+            data.merchantCode = merchantMatch[1];
+        } else {
+            const standaloneMID = digitFocusText.match(/\b(\d{10,15})\b/);
+            if (standaloneMID) data.merchantCode = standaloneMID[1];
         }
 
-        // 5. TERMINAL ID (8 digits usually)
-        const tidPatterns = [
-            /(?:TID|Terminal|Term|طرفية)[:\.\s]*(\d{8})/i,
-            /\b(\d{8})\b/ // Standalone 8 digits might be TID
-        ];
-        for (const pat of tidPatterns) {
-            const m = cleanText.match(pat);
-            if (m) { // Avoid confusion with date parts
-                data.terminalId = m[1];
-                break;
-            }
-        }
+        // 5. TERMINAL ID (TID)
+        const tidMatch = digitFocusText.match(/(?:TID|Terminal|Term|طرفية)[:\.\s]*(\d{8})/i);
+        if (tidMatch) data.terminalId = tidMatch[1];
 
         // 6. APPROVAL / AUTH CODE (6 digits)
-        const authMatch = cleanText.match(/(?:Approval|Appr|Auth|Code|الموافقة)\s*(?:CODE|NO)?[:\.\s]*(\d{6})/i);
+        const authMatch = digitFocusText.match(/(?:Approval|Appr|Auth|Code|الموافقة)\s*(?:CODE|NO)?[:\.\s]*(\d{6})/i);
         if (authMatch) {
             data.approvalNumber = authMatch[1];
         } else {
-            // Fallback: look for any standalone 6-digit number that isn't part of a time or long ID
-            const sixDigitMatches = cleanText.match(/\b\d{6}\b/g);
-            if (sixDigitMatches) {
-                // Heuristic: pick the one that doesn't look like a time part (if we can't be sure, take the first)
-                data.approvalNumber = sixDigitMatches[0];
-            }
+            const standalone6 = digitFocusText.match(/\b\d{6}\b/g);
+            if (standalone6) data.approvalNumber = standalone6[0];
         }
 
-        // 7. BATCH (1-6 digits)
-        const batchMatch = cleanText.match(/(?:Batch|الباتش|رقم الباتش)\s*(?:NO|#)?[:\.\s]*(\d{1,6})/i);
+        // 7. BATCH
+        const batchMatch = digitFocusText.match(/(?:Batch|الباتش|رقم الباتش)\s*(?:NO|#)?[:\.\s]*(\d{1,6})/i);
         if (batchMatch) data.batchNumber = batchMatch[1];
 
         // 8. LAST 4 DIGITS
-        // Improved to avoid AID (Alpha-numeric) and look for credit card masked patterns
-        const last4Match = cleanText.match(/(?:[\*xX\.\-\s]{4,}|Card|Card No|PAN)[:\.\s]*\d*(\d{4})\b/i);
+        const last4Match = digitFocusText.match(/(?:[\*xX\.\-\s]{4,}|Card|Card No|PAN)[:\.\s]*\d*(\d{4})\b/i);
         if (last4Match) {
             data.last4Digits = last4Match[1];
         } else {
-            // Fallback for standalone 4-digit at end of line
-            const standalone4 = cleanText.match(/\b\d{4}$/m);
+            const standalone4 = digitFocusText.match(/\b\d{4}$/m);
             if (standalone4) data.last4Digits = standalone4[0];
         }
 
-        // 9. RRN (12 digits)
-        const rrnMatch = cleanText.match(/(?:RRN|Ref|Reference)[:\.\s]*(\d{12})/i);
+        // 9. RRN
+        const rrnMatch = digitFocusText.match(/(?:RRN|Ref|Reference)[:\.\s]*(\d{12})/i);
         if (rrnMatch) data.rrn = rrnMatch[1];
 
         return data;
