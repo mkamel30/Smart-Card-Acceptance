@@ -49,7 +49,7 @@ export default function ReceiptUpload() {
         <div className="max-w-2xl mx-auto space-y-6 text-right" dir="rtl">
             <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
                 <h2 className="text-2xl font-bold mb-2">تحميل الوصول</h2>
-                <p className="text-gray-500 mb-6">سيتم معالجة الصورة باستخدام Google Vision لأعلى دقة</p>
+                <p className="text-gray-500 mb-6">سيتم معالجة الصورة باستخدام محرك OCR عالي الدقة</p>
 
                 {!preview ? (
                     <div
@@ -83,7 +83,7 @@ export default function ReceiptUpload() {
                                 {uploading ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                        جاري المعالجة (Google AI)...
+                                        جاري المعالجة...
                                     </>
                                 ) : (
                                     <>
