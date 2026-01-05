@@ -1,5 +1,7 @@
 import Tesseract from 'tesseract.js';
 import sharp from 'sharp';
+import axios from 'axios';
+import FormData from 'form-data';
 import { supabase } from '../../config/supabase';
 
 export interface ExtractedReceiptData {
@@ -20,27 +22,26 @@ export class OCRService {
     // ...
 
     async uploadImage(file: Express.Multer.File): Promise<string> {
-        let uploadBuffer = file.buffer;
+        let storageBuffer = file.buffer;
         let contentType = file.mimetype;
 
         try {
-            uploadBuffer = await sharp(file.buffer)
-                .resize({ width: 1500, withoutEnlargement: true })
-                .grayscale()
-                .sharpen()
-                .normalize()
-                .toFormat('png')
+            // Compress for storage: WebP is much smaller than PNG/JPEG
+            storageBuffer = await sharp(file.buffer)
+                .resize({ width: 1000, withoutEnlargement: true }) // 1000px is plenty for viewing
+                .webp({ quality: 75 })
                 .toBuffer();
-            contentType = 'image/png';
+            contentType = 'image/webp';
         } catch (e) {
             console.warn('Image optimization failed', e);
         }
 
-        const fileName = `receipts/${Date.now()}_compressed.png`;
+        const fileName = `receipts/${Date.now()}_v.webp`;
         const { data, error } = await supabase.storage
             .from('receipts')
-            .upload(fileName, uploadBuffer, {
+            .upload(fileName, storageBuffer, {
                 contentType,
+                cacheControl: '3600',
                 upsert: false
             });
 
@@ -55,32 +56,36 @@ export class OCRService {
 
     async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string }> {
 
-        let uploadBuffer = file.buffer;
-        let contentType = file.mimetype;
+        let ocrBuffer = file.buffer;
+        let storageBuffer = file.buffer;
 
         try {
-            // Optimize Image: Grayscale, Sharpen, Threshold for better OCR
-            uploadBuffer = await sharp(file.buffer)
-                .resize({ width: 1500, withoutEnlargement: true }) // Higher res for better details
-                .grayscale() // Remove color noise
-                .sharpen() // Enhance edges
-                .normalize() // Improve contrast
-                .toFormat('png') // PNG is better for text (lossless)
+            // 1. Prepare Buffer for OCR (High Quality PNG, Grayscale, Sharpened)
+            ocrBuffer = await sharp(file.buffer)
+                .resize({ width: 1500, withoutEnlargement: true })
+                .grayscale()
+                .sharpen()
+                .normalize()
+                .toFormat('png')
                 .toBuffer();
 
-            contentType = 'image/png';
+            // 2. Prepare Buffer for Storage (Compressed WebP)
+            storageBuffer = await sharp(file.buffer)
+                .resize({ width: 1000, withoutEnlargement: true })
+                .webp({ quality: 75 })
+                .toBuffer();
         } catch (e) {
-            console.warn('Image optimization failed, using original file', e);
+            console.warn('Image optimization failed, using original file for both', e);
         }
 
         // 1. Upload to Supabase Storage
         let publicUrl = '';
         try {
-            const fileName = `receipts/${Date.now()}_compressed.png`; // use png extension to match content type
+            const fileName = `receipts/${Date.now()}_s.webp`;
             const { data, error } = await supabase.storage
                 .from('receipts')
-                .upload(fileName, uploadBuffer, {
-                    contentType,
+                .upload(fileName, storageBuffer, {
+                    contentType: 'image/webp',
                     upsert: false
                 });
 
@@ -95,11 +100,33 @@ export class OCRService {
         }
 
         // 2. Perform OCR
-        // Try Google Vision API first (if key provided), else fallback to Tesseract
         let text = '';
-        const GOOGLE_API_KEY = 'AQ.Ab8RN6Lj_W9uRCv4wa92VzsHkDKN7Y-YAJQHuwi70sX5spwbBQ'; // User provided key
+        let paddleData: any = null;
 
-        if (GOOGLE_API_KEY) {
+        // --- Step A: Try PaddleOCR Service (Free & Local) ---
+        try {
+            console.log('Attempting PaddleOCR...');
+            const pFormData = new FormData();
+            pFormData.append('file', ocrBuffer, { filename: 'receipt.png' });
+
+            const pResponse = await axios.post('http://localhost:5000/scan', pFormData, {
+                headers: { ...pFormData.getHeaders() },
+                timeout: 10000 // 10s timeout
+            });
+
+            if (pResponse.data && pResponse.data.success) {
+                text = pResponse.data.rawText || '';
+                paddleData = pResponse.data.data;
+                console.log('PaddleOCR Success');
+            }
+        } catch (err) {
+            console.warn('PaddleOCR failed or not running:', (err as any).message);
+        }
+
+        // --- Step B: Try Google Vision API (Paid) ---
+        const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AQ.Ab8RN6Lj_W9uRCv4wa92VzsHkDKN7Y-YAJQHuwi70sX5spwbBQ';
+
+        if (GOOGLE_API_KEY && !text) {
             try {
                 console.log('Attempting Google Vision OCR...');
                 const start = Date.now();
@@ -108,7 +135,7 @@ export class OCRService {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         requests: [{
-                            image: { content: uploadBuffer.toString('base64') },
+                            image: { content: ocrBuffer.toString('base64') },
                             features: [{ type: 'TEXT_DETECTION' }]
                         }]
                     })
@@ -119,26 +146,40 @@ export class OCRService {
                 if (result.responses?.[0]?.fullTextAnnotation?.text) {
                     text = result.responses[0].fullTextAnnotation.text;
                     console.log(`Google Vision Success (${Date.now() - start}ms)`);
-                } else if (result.error) {
-                    console.error('Google Vision API Error:', result.error);
-                    throw new Error('Google Vision API Error');
-                } else {
-                    console.warn('Google Vision returned no text, falling back...');
-                    throw new Error('No text found');
                 }
             } catch (err) {
-                console.warn('Google Vision failed, falling back to Tesseract:', err);
-                // Fallback to Tesseract
-                const tesseractResult = await Tesseract.recognize(uploadBuffer, 'ara+eng');
-                text = tesseractResult.data.text;
+                console.warn('Google Vision failed:', err);
             }
-        } else {
-            const tesseractResult = await Tesseract.recognize(uploadBuffer, 'ara+eng');
-            text = tesseractResult.data.text;
         }
 
-        // 3. Parse Text
+        // --- Step C: Fallback to Tesseract.js (Free & Built-in) ---
+        if (!text) {
+            try {
+                console.log('Falling back to Tesseract.js...');
+                const tesseractResult = await Tesseract.recognize(ocrBuffer, 'ara+eng');
+                text = tesseractResult.data.text;
+                console.log('Tesseract.js Success');
+            } catch (err) {
+                console.error('Tesseract.js failed:', err);
+            }
+        }
+
+        // 3. Parse and Merge Results
         const parsedData = this.parseReceiptText(text);
+
+        // Hybrid Merge: If PaddleOCR provided structured data, use it to fill gaps
+        if (paddleData) {
+            if (paddleData.merchantCode) parsedData.merchantCode = paddleData.merchantCode;
+            if (paddleData.terminalId) parsedData.terminalId = paddleData.terminalId;
+            if (paddleData.batchNumber) parsedData.batchNumber = paddleData.batchNumber;
+            if (paddleData.approvalNumber) parsedData.approvalNumber = paddleData.approvalNumber;
+            if (paddleData.totalAmount) parsedData.totalAmount = paddleData.totalAmount;
+            if (paddleData.date) parsedData.date = paddleData.date;
+            if (paddleData.time) parsedData.time = paddleData.time;
+            if (paddleData.last4Digits) parsedData.last4Digits = paddleData.last4Digits;
+            if (paddleData.rrn) parsedData.rrn = paddleData.rrn;
+        }
+
         if (publicUrl) parsedData.imageUrl = publicUrl;
 
         return {
