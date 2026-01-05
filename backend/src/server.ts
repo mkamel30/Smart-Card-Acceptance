@@ -19,8 +19,15 @@ import ocrRoutes from './modules/ocr/ocr.routes';
 import pdfRoutes from './modules/pdf/pdf.routes';
 import { errorHandler } from './middleware/errorHandler';
 
-app.use(helmet());
-app.use(cors());
+app.use(cors({
+    origin: true, // Allow all origins that matched origin
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-password', 'selectedbranchid']
+}));
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(express.json());
 
 // Routes
