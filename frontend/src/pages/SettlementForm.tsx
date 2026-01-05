@@ -231,56 +231,51 @@ export default function SettlementWorkFlow() {
             </div>
 
             {activeTab === 'entry' ? (
-                <div className="grid grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left: Entry Form */}
-                    <div className="col-span-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-                        <div className="flex justify-between items-center mb-8">
+                    <div className="lg:col-span-8 bg-white p-4 lg:p-8 rounded-2xl shadow-sm border border-gray-200 order-2 lg:order-1">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                             <h2 className="text-xl font-black text-gray-800">بيانات الإيصال</h2>
-                            <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                            <div className="flex gap-2 p-1 bg-gray-100 rounded-lg w-full sm:w-auto self-end">
                                 <button
                                     onClick={() => setEntryMode('manual')}
-                                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${entryMode === 'manual' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
+                                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-bold transition-all ${entryMode === 'manual' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
                                 >
                                     إدخال يدوي
                                 </button>
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
-                                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${scanning ? 'bg-primary text-white animate-pulse' : 'text-gray-500 hover:bg-gray-200'}`}
+                                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-bold transition-all ${scanning ? 'bg-primary text-white animate-pulse' : 'text-gray-500 hover:bg-gray-200'}`}
                                 >
                                     {scanning ? <Loader2 className="w-4 h-4 animate-spin inline ml-1" /> : <Zap className="w-4 h-4 inline ml-1" />}
                                     مسح OCR
-                                    {ocrEngine && !scanning && (
-                                        <span className="mr-2 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded border border-blue-100 animate-fade-in">
-                                            بواسطة: {ocrEngine === 'PaddleOCR' ? 'محرك ذكي 🧠' : 'محرك ثانوي 🐢'}
-                                        </span>
-                                    )}
                                 </button>
                             </div>
                             <input type="file" ref={fileInputRef} onChange={handleOCRUpload} className="hidden" accept="image/*" />
                         </div>
 
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
                                     <label className="label-sm">التاريخ</label>
-                                    <input type="datetime-local" {...register('settlementDate')} className="input" />
+                                    <input type="datetime-local" {...register('settlementDate')} className="input w-full" />
                                 </div>
                                 <div>
                                     <label className="label-sm">كود المخبز / التاجر</label>
-                                    <input type="text" {...register('merchantCode')} className="input" placeholder="مثلاً: 4897..." />
+                                    <input type="text" {...register('merchantCode')} className="input w-full" placeholder="مثلاً: 4897..." />
                                     {errors.merchantCode && <p className="error-text">{errors.merchantCode.message}</p>}
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
                                     <label className="label-sm">اسم المخبز / التاجر</label>
-                                    <input type="text" {...register('merchantName')} className="input" placeholder="ادخل الاسم هنا" />
+                                    <input type="text" {...register('merchantName')} className="input w-full" placeholder="ادخل الاسم هنا" />
                                     {errors.merchantName && <p className="error-text">{errors.merchantName.message}</p>}
                                 </div>
                                 <div>
                                     <label className="label-sm">نوع الخدمة</label>
-                                    <select {...register('subService')} className="input">
+                                    <select {...register('subService')} className="input w-full">
                                         <option value="">-- اختار نوع الخدمة --</option>
                                         <option value="سداد قطع الغيار و مصاريف الصيانة">سداد قطع الغيار و مصاريف الصيانة</option>
                                         <option value="سداد قيمة مبيعات الماكينات">سداد قيمة مبيعات الماكينات</option>
@@ -292,11 +287,11 @@ export default function SettlementWorkFlow() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6 border-t pt-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t pt-6">
                                 <div>
                                     <label className="label-sm">المبلغ المسدد</label>
                                     <div className="relative">
-                                        <input type="number" step="0.01" {...register('settledAmount', { valueAsNumber: true })} className="input text-2xl font-black text-primary" />
+                                        <input type="number" step="0.01" {...register('settledAmount', { valueAsNumber: true })} className="input text-2xl font-black text-primary w-full pl-12" />
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">ج.م</span>
                                     </div>
                                     {errors.settledAmount && <p className="error-text">{errors.settledAmount.message}</p>}
@@ -304,19 +299,19 @@ export default function SettlementWorkFlow() {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="label-sm">رقم الباتش</label>
-                                        <input type="text" {...register('batchNumber')} className="input" />
+                                        <input type="text" {...register('batchNumber')} className="input w-full" />
                                     </div>
                                     <div>
                                         <label className="label-sm">رقم الموافقة</label>
-                                        <input type="text" {...register('approvalNumber')} className="input" />
+                                        <input type="text" {...register('approvalNumber')} className="input w-full" />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
                                     <label className="label-sm">آخر 4 أرقام من البطاقة</label>
-                                    <input type="text" maxLength={4} {...register('last4Digits')} className="input font-mono text-center tracking-widest text-lg" placeholder="XXXX" />
+                                    <input type="text" maxLength={4} {...register('last4Digits')} className="input font-mono text-center tracking-widest text-lg w-full" placeholder="XXXX" />
                                     {errors.last4Digits && <p className="error-text">{errors.last4Digits.message}</p>}
                                 </div>
                                 <div className="flex items-end">
@@ -329,7 +324,7 @@ export default function SettlementWorkFlow() {
                     </div>
 
                     {/* Right: Recent Stats/Info */}
-                    <div className="col-span-4 space-y-6">
+                    <div className="lg:col-span-4 space-y-6 order-1 lg:order-2">
                         <div className="bg-gray-900 text-white p-6 rounded-2xl shadow-xl">
                             <h3 className="font-bold mb-4 opacity-70">آخر الإيصالات المضافة</h3>
                             <div className="space-y-4">
@@ -345,12 +340,12 @@ export default function SettlementWorkFlow() {
                                                     <Image className="w-3.5 h-3.5" />
                                                 </button>
                                             )}
-                                            <div>
-                                                <p className="font-bold">{s.merchantName || 'تاجر غير مسمى'}</p>
+                                            <div className="min-w-0">
+                                                <p className="font-bold truncate max-w-[120px]">{s.merchantName || 'تاجر غير مسمى'}</p>
                                                 <p className="text-[10px] opacity-50">{new Date(s.settlementDate).toLocaleString('ar-EG')}</p>
                                             </div>
                                         </div>
-                                        <p className="font-black text-primary-light">{Number(s.netAmount).toLocaleString()} ج.م</p>
+                                        <p className="font-black text-primary-light whitespace-nowrap">{Number(s.netAmount).toLocaleString()} ج.م</p>
                                     </div>
                                 ))}
                             </div>
@@ -364,20 +359,20 @@ export default function SettlementWorkFlow() {
                     </div>
                 </div>
             ) : (
-                /* Tab 2: Settle / Report View - Grouped by Batch */
+                /* Tab 2: Settle / Report View */
                 <div className="space-y-4">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                        <div className="flex justify-between items-center mb-6">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div>
                                 <h2 className="text-xl font-bold">تسوية الباتشات</h2>
                                 <p className="text-sm text-gray-500">المعاملات مجمعة حسب رقم الباتش</p>
                             </div>
-                            <div className="flex gap-2">
-                                <span className="flex items-center gap-1 text-xs text-yellow-600">
+                            <div className="flex gap-2 text-xs">
+                                <span className="flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
                                     <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
                                     معلقة
                                 </span>
-                                <span className="flex items-center gap-1 text-xs text-green-600">
+                                <span className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full">
                                     <span className="w-2 h-2 rounded-full bg-green-400"></span>
                                     تمت التسوية
                                 </span>
@@ -393,10 +388,11 @@ export default function SettlementWorkFlow() {
                                         key={batch.batchNumber}
                                         className={`border rounded-xl overflow-hidden ${batch.isSettled ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}
                                     >
-                                        {/* Batch Header */}
-                                        <div className={`p-4 flex justify-between items-center ${batch.isSettled ? 'bg-green-100' : 'bg-gray-50'}`}>
+                                        <div className={`p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${batch.isSettled ? 'bg-green-100' : 'bg-gray-50'}`}>
                                             <div className="flex items-center gap-3">
-                                                <Package className={`w-5 h-5 ${batch.isSettled ? 'text-green-600' : 'text-primary'}`} />
+                                                <div className={`p-2 rounded-lg ${batch.isSettled ? 'bg-green-200 text-green-700' : 'bg-white border border-gray-200 text-primary'}`}>
+                                                    <Package className="w-5 h-5" />
+                                                </div>
                                                 <div>
                                                     <p className="font-bold text-lg">باتش #{batch.batchNumber}</p>
                                                     <p className="text-xs text-gray-500">
@@ -404,76 +400,71 @@ export default function SettlementWorkFlow() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <p className="text-xl font-black text-primary">
+
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full lg:w-auto">
+                                                <p className="text-xl font-black text-primary text-left sm:text-right">
                                                     {batch.totalAmount.toLocaleString()} ج.م
                                                 </p>
-                                                {batch.isSettled ? (
-                                                    <span className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
-                                                        <CheckCircle2 className="w-4 h-4" />
-                                                        تمت التسوية
-                                                    </span>
-                                                ) : (
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleDownloadPDF(batch.batchNumber)}
-                                                            className="btn-secondary px-3 py-2 text-sm flex items-center gap-1"
-                                                            title="عرض التقرير PDF"
-                                                        >
-                                                            <Download className="w-4 h-4" />
-                                                            PDF
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDownloadExcel(batch.batchNumber)}
-                                                            className="btn-secondary px-3 py-2 text-sm flex items-center gap-1 text-green-700 bg-green-50 hover:bg-green-100 border-green-200"
-                                                            title="تحميل Excel"
-                                                        >
-                                                            <FileSpreadsheet className="w-4 h-4" />
-                                                            Excel
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleEmailPDF(batch)}
-                                                            className="btn-secondary px-3 py-2 text-sm flex items-center gap-1"
-                                                            title="إرسال بالإيميل"
-                                                        >
-                                                            <Mail className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleSettleBatch(batch.batchNumber)}
-                                                            disabled={settling === batch.batchNumber}
-                                                            className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
-                                                        >
-                                                            {settling === batch.batchNumber ? (
-                                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                            ) : (
-                                                                <CheckCircle2 className="w-4 h-4" />
-                                                            )}
-                                                            تسوية الباتش
-                                                        </button>
-                                                    </div>
-                                                )}
+
+                                                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
+                                                    {batch.isSettled ? (
+                                                        <span className="col-span-2 sm:w-auto bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                                                            <CheckCircle2 className="w-4 h-4" />
+                                                            تمت التسوية
+                                                        </span>
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleDownloadPDF(batch.batchNumber)}
+                                                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1"
+                                                            >
+                                                                <Download className="w-4 h-4" />
+                                                                <span className="sm:hidden">PDF</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDownloadExcel(batch.batchNumber)}
+                                                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1 text-green-700 bg-green-50 hover:bg-green-100 border-green-200"
+                                                            >
+                                                                <FileSpreadsheet className="w-4 h-4" />
+                                                                <span className="sm:hidden">Excel</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleEmailPDF(batch)}
+                                                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1"
+                                                            >
+                                                                <Mail className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleSettleBatch(batch.batchNumber)}
+                                                                disabled={settling === batch.batchNumber}
+                                                                className="col-span-2 sm:w-auto btn-primary px-4 py-2 text-sm flex items-center justify-center gap-2"
+                                                            >
+                                                                {settling === batch.batchNumber ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                                تسوية
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Batch Transactions */}
-                                        <div className="divide-y divide-gray-100">
+                                        <div className="divide-y divide-gray-100 bg-white">
                                             {batch.transactions.map((t: any, idx: number) => (
-                                                <div key={t.id} className="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="text-gray-400 text-sm w-6">{idx + 1}</span>
+                                                <div key={t.id} className="p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50 transition-colors">
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="text-gray-400 text-sm mt-0.5 w-6">{idx + 1}</span>
                                                         <div>
-                                                            <p className="font-bold">{t.merchantName || t.merchantCode}</p>
-                                                            <p className="text-xs text-gray-400">{t.subService}</p>
+                                                            <p className="font-bold text-sm text-gray-800">{t.merchantName || t.merchantCode}</p>
+                                                            <p className="text-xs text-gray-500 line-clamp-1">{t.subService}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-6 text-sm">
-                                                        <span className="text-gray-500">موافقة: {t.approvalNumber}</span>
-                                                        <span className="text-gray-500">**** {t.last4Digits}</span>
-                                                        <span className="font-bold text-primary">{Number(t.settledAmount).toLocaleString()} ج.م</span>
+                                                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 text-sm bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg">
+                                                        <span className="text-gray-500 text-xs">#{t.approvalNumber}</span>
+                                                        <span className="text-gray-500 font-mono text-xs">**** {t.last4Digits}</span>
+                                                        <span className="font-bold text-primary">{Number(t.settledAmount).toLocaleString()}</span>
                                                         <button
                                                             onClick={() => window.open(`/settlement/${t.id}/print`, '_blank')}
-                                                            className="p-1 text-gray-400 hover:text-blue-500 rounded-md hover:bg-blue-50 transition-colors"
-                                                            title="طباعة إيصال"
+                                                            className="text-gray-400 hover:text-blue-600 transition-colors p-1"
                                                         >
                                                             <Printer className="w-4 h-4" />
                                                         </button>
