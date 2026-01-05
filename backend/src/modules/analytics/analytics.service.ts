@@ -1,6 +1,5 @@
 
 import prisma from '../../config/database';
-import { SettlementStatusSchema } from '../settlements/settlement.dto';
 
 export class AnalyticsService {
     async getDashboardSummary(filters: any) {

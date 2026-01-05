@@ -26,10 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return saved ? JSON.parse(saved) : null;
     });
     const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
-    const [isAdmin, setIsAdmin] = useState(() =>
-        localStorage.getItem('isAdmin') === 'true' ||
-        (localStorage.getItem('user') && JSON.parse(localStorage.getItem('user')!).role === 'ADMIN')
-    );
+    const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+        const isAdminLegacy = localStorage.getItem('isAdmin') === 'true';
+        const userSaved = localStorage.getItem('user');
+        const userRoleIsAdmin = userSaved ? JSON.parse(userSaved).role === 'ADMIN' : false;
+        return isAdminLegacy || userRoleIsAdmin;
+    });
 
     const login = (token: string, user: User) => {
         setToken(token);
@@ -58,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.location.href = '/select-branch';
     };
 
-    const isBranchManager = user?.role === 'BRANCH_MANAGER';
+    const isBranchManager = user?.role === 'BRANCH_MANAGER' || false;
 
     return (
         <AuthContext.Provider value={{
@@ -83,5 +85,6 @@ export function useAuth() {
     return context;
 }
 
-// Keep useAdmin for legacy code compatibility
+// Keep using AdminProvider and useAdmin for legacy code compatibility
 export const useAdmin = useAuth;
+export const AdminProvider = AuthProvider;

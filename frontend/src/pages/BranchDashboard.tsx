@@ -1,14 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import api from '@/api/client';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, LineChart, Line, Legend
+    PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import Select from 'react-select';
 import {
-    LayoutDashboard, Filter, Calendar, Briefcase, Landmark, CreditCard,
-    ArrowUpRight, ArrowDownRight, TrendingUp, Users, MapPin, Download, RefreshCw
+    LayoutDashboard, Calendar, Briefcase, Landmark, CreditCard,
+    ArrowUpRight, TrendingUp, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -282,13 +281,14 @@ export default function BranchDashboard() {
                                         outerRadius={80}
                                         paddingAngle={5}
                                         dataKey="count"
-                                        label={({ status, percent }) => `${status} ${(percent * 100).toFixed(0)}%`}
+                                        dataKey="count"
+                                        label={({ status, percent }: any) => `${status} ${(percent * 100).toFixed(0)}%`}
                                     >
-                                        {(summary?.statusBreakdown || []).map((entry: any, index: number) => (
+                                        {(summary?.statusBreakdown || []).map((_entry: any, index: number) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip borderRadius={12} />
+                                    <Tooltip contentStyle={{ borderRadius: '12px' }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>

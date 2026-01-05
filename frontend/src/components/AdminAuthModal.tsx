@@ -10,13 +10,13 @@ interface AdminAuthModalProps {
 export default function AdminAuthModal({ isOpen, onClose }: AdminAuthModalProps) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState(false);
-    const { login } = useAdmin();
+    const { legacyLogin } = useAdmin();
 
     if (!isOpen) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (login(password)) {
+        if (legacyLogin(password)) {
             onClose();
             setPassword('');
             setError(false);
