@@ -28,6 +28,7 @@ export const CreateSettlementSchema = z.object({
     referenceNumber: z.string().optional(),
     invoiceNumber: z.string().optional(),
     notes: z.string().optional(),
+    receiptImageUrl: z.string().optional(),
 });
 
 export const UpdateSettlementSchema = CreateSettlementSchema.partial();

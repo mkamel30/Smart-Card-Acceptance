@@ -137,7 +137,7 @@ export default function TransactionReceipt() {
                     <div className="flex items-center gap-2">
                         <span className="font-bold text-lg">الفرع :</span>
                         <div className="border-b-2 border-dotted border-gray-400 min-w-[200px] text-center font-serif text-xl px-2">
-                            {branchName}
+                            {settlement?.branch?.name || branchName}
                         </div>
                     </div>
                     <img src="/logo.png" alt="Company Logo" className="h-16 object-contain" />

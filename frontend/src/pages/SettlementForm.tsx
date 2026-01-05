@@ -130,6 +130,8 @@ export default function SettlementWorkFlow() {
         }
     }, [activeTab]);
 
+    const [receiptImageUrl, setReceiptImageUrl] = useState<string>('');
+
     const applyOCR = (ocrData: any) => {
         setEntryMode('manual');
         if (ocrData.batchNumber) setValue('batchNumber', ocrData.batchNumber);
@@ -169,6 +171,7 @@ export default function SettlementWorkFlow() {
             });
             applyOCR(res.data.data);
             setOcrEngine(res.data.engine); // Save which engine was used
+            if (res.data.data.imageUrl) setReceiptImageUrl(res.data.data.imageUrl);
         } catch (err) {
             alert('فشل قراءة الإيصال، يرجى الإدخال يدوياً');
         } finally {
@@ -186,6 +189,7 @@ export default function SettlementWorkFlow() {
                 netAmount: data.settledAmount,
                 referenceNumber: data.referenceNumber || `REF-${Date.now()}`,
                 branchId: localStorage.getItem('selectedBranchId') || undefined, // Attach Branch ID
+                receiptImageUrl: receiptImageUrl || undefined,
             };
             await api.post('/settlements', payload);
             alert('تم حفظ الإيصال بنجاح');
@@ -204,6 +208,7 @@ export default function SettlementWorkFlow() {
                 last4Digits: '',
                 referenceNumber: '',
             });
+            setReceiptImageUrl('');
             fetchRecent();
         } catch (err) {
             alert('خطأ أثناء الحفظ');

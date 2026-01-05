@@ -60,6 +60,13 @@ export class SettlementService {
                 createdBy: userId,
                 status: 'PENDING',
                 branchId: data.branchId,
+                receipt: data.receiptImageUrl ? {
+                    create: {
+                        imageUrl: data.receiptImageUrl,
+                        processingStatus: 'COMPLETED',
+                        processedAt: new Date(),
+                    }
+                } : undefined,
             } as any, // Cast to any to bypass Prisma client validation in IDE
             include: {
                 receipt: true,

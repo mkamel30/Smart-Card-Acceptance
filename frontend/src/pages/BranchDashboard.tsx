@@ -64,13 +64,16 @@ export default function BranchDashboard() {
         try {
             const effectiveBranches = overrideBranches || selectedBranches;
 
-            const params = {
-                branches: effectiveBranches.map(b => b.value),
+            const params: any = {
                 dateFrom,
                 dateTo,
                 status,
                 bankName: bank
             };
+
+            if (effectiveBranches && effectiveBranches.length > 0) {
+                params.branches = effectiveBranches.map(b => b.value);
+            }
             const [sumRes, chartRes] = await Promise.all([
                 api.get('/analytics/summary', { params }),
                 api.get('/analytics/charts', { params })
