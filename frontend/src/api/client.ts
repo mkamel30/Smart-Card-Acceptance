@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
 
 const getBaseUrl = () => {
     const envUrl = import.meta.env.VITE_API_URL;
@@ -14,7 +14,7 @@ const api = axios.create({
 });
 
 // Auto-inject branchId to all GET requests
-api.interceptors.request.use((config) => {
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     const branchId = localStorage.getItem('selectedBranchId');
     if (branchId && config.method === 'get') {
         config.params = { ...config.params, branchId };
