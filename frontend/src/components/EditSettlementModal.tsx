@@ -22,7 +22,7 @@ export default function EditSettlementModal({ isOpen, onClose, settlement, onSav
                 approvalNumber: settlement.approvalNumber,
                 settledAmount: settlement.settledAmount,
                 fees: settlement.fees,
-                settlementDate: settlement.settlementDate ? new Date(settlement.settlementDate).toISOString().split('T')[0] : '',
+                settlementDate: settlement.settlementDate ? new Date(settlement.settlementDate).toISOString().slice(0, 10) : '',
                 subService: settlement.subService
             });
         }

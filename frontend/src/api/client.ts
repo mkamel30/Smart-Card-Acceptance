@@ -19,6 +19,12 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     if (branchId && config.method === 'get') {
         config.params = { ...config.params, branchId };
     }
+
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (adminPassword) {
+        config.headers['x-admin-password'] = adminPassword;
+    }
+
     return config;
 });
 

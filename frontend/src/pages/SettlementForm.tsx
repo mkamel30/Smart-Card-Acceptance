@@ -130,14 +130,21 @@ export default function SettlementWorkFlow() {
         if (ocrData.totalAmount) setValue('settledAmount', ocrData.totalAmount);
 
         if (ocrData.date) {
-            const dParts = ocrData.date.split(/[-/]/);
-            const day = dParts[0].padStart(2, '0');
-            const month = dParts[1].padStart(2, '0');
-            const year = dParts[2].length === 2 ? `20${dParts[2]}` : dParts[2];
+            // Robust Date Parsing
+            const parts = ocrData.date.split(/[-/.]/);
+            let y, m, d;
+            if (parts[0].length === 4) { // YYYY-MM-DD
+                y = parts[0]; m = parts[1]; d = parts[2];
+            } else { // DD-MM-YYYY
+                d = parts[0]; m = parts[1]; y = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+            }
             const tParts = (ocrData.time || '00:00').split(':');
-            const hour = (tParts[0] || '00').padStart(2, '0');
-            const minute = (tParts[1] || '00').padStart(2, '0');
-            setValue('settlementDate', `${year}-${month}-${day}T${hour}:${minute}`);
+            const hh = (tParts[0] || '00').padStart(2, '0');
+            const mm = (tParts[1] || '00').padStart(2, '0');
+
+            // Format for datetime-local: YYYY-MM-DDTHH:MM
+            const formatted = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${hh}:${mm}`;
+            setValue('settlementDate', formatted);
         }
     };
 
