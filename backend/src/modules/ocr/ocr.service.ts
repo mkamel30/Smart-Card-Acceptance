@@ -80,7 +80,7 @@ export class OCRService {
                     })
                 });
 
-                const result = await response.json();
+                const result: any = await response.json();
 
                 if (result.responses?.[0]?.fullTextAnnotation?.text) {
                     text = result.responses[0].fullTextAnnotation.text;
