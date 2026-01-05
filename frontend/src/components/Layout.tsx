@@ -17,6 +17,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     const navItems = [
         { name: 'لوحة التحكم', path: '/', icon: LayoutDashboard },
+        { name: 'تحليلات الفروع', path: '/branch-dashboard', icon: LayoutDashboard },
         { name: 'تسوية جديدة', path: '/settlement/new', icon: FilePlus },
         { name: 'سجل الباتشات', path: '/batches', icon: ScrollText },
     ];

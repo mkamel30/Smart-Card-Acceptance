@@ -148,14 +148,10 @@ export default function SelectBranch() {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    localStorage.removeItem('selectedBranchId');
-                                    localStorage.setItem('selectedBranchName', 'كل الفروع');
-                                    window.location.href = '/';
-                                }}
+                                onClick={() => window.location.href = '/login'}
                                 className="w-full py-2 mt-2 text-xs font-bold text-primary border border-primary/20 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors"
                             >
-                                عرض كل الفروع (Global View) 🌍
+                                تسجيل دخول مديرين الفروع (Managers) 🔐
                             </button>
                         </form>
                     )}

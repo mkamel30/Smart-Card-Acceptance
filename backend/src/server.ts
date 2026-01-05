@@ -17,6 +17,8 @@ import settingsRoutes from './modules/settings/settings.routes';
 import emailRoutes from './modules/email/email.routes';
 import ocrRoutes from './modules/ocr/ocr.routes';
 import pdfRoutes from './modules/pdf/pdf.routes';
+import analyticsRoutes from './modules/analytics/analytics.routes';
+import authRoutes from './modules/auth/auth.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 app.use(cors({
@@ -42,6 +44,8 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/ocr', ocrRoutes);
 app.use('/api/pdf', pdfRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/uploads', express.static('uploads'));
 
 // Basic health check
