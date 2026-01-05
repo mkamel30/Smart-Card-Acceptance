@@ -361,35 +361,45 @@ export default function BranchDashboard() {
                         <TrendingUp className="w-5 h-5 text-primary" /> تطور المبيعات (الصافي)
                     </h3>
                     <div className="h-80 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={charts?.trend || []}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                                <XAxis
-                                    dataKey="date"
-                                    tickFormatter={(str) => format(new Date(str), 'MM/dd')}
-                                    tick={{ fontSize: 10, fill: '#9ca3af' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <YAxis
-                                    tick={{ fontSize: 10, fill: '#9ca3af' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    labelFormatter={(val) => format(new Date(val), 'yyyy/MM/dd')}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="total"
-                                    stroke="#6366f1"
-                                    strokeWidth={4}
-                                    dot={{ fill: '#6366f1', strokeWidth: 2, r: 4, stroke: '#fff' }}
-                                    activeDot={{ r: 6, strokeWidth: 0 }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        {loading ? (
+                            <div className="h-full flex items-center justify-center text-gray-400">
+                                <RefreshCw className="w-6 h-6 animate-spin" />
+                            </div>
+                        ) : (!charts?.trend || charts.trend.length === 0) ? (
+                            <div className="h-full flex items-center justify-center text-gray-400 font-medium">
+                                لا توجد بيانات
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={charts?.trend || []}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                    <XAxis
+                                        dataKey="date"
+                                        tickFormatter={(str) => format(new Date(str), 'MM/dd')}
+                                        tick={{ fontSize: 10, fill: '#9ca3af' }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <YAxis
+                                        tick={{ fontSize: 10, fill: '#9ca3af' }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                        labelFormatter={(val) => format(new Date(val), 'yyyy/MM/dd')}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="total"
+                                        stroke="#6366f1"
+                                        strokeWidth={4}
+                                        dot={{ fill: '#6366f1', strokeWidth: 2, r: 4, stroke: '#fff' }}
+                                        activeDot={{ r: 6, strokeWidth: 0 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
 
