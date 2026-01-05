@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FilePlus, ScrollText, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FilePlus, ScrollText, Settings, LogOut, Menu, X, Building2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAdmin } from '../context/AdminContext';
@@ -15,8 +15,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const { isAdmin, user, logout } = useAdmin();
     const [isAuthModalOpen, setAuthModalOpen] = useState(false);
     const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [branchName, setBranchName] = useState('');
 
     const isMultiBranch = isAdmin || (user?.role === 'BRANCH_MANAGER' && user?.branches && user.branches.length > 1);
+
+    useEffect(() => {
+        setBranchName(localStorage.getItem('selectedBranchName') || '');
+    }, [location]);
 
     const navItems = [
         { name: 'الرئيسية', path: '/', icon: LayoutDashboard },
@@ -98,7 +103,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         </h1>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 sm:gap-4">
+                        {branchName && (
+                            <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                                <Building2 className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm font-bold text-gray-700">{branchName}</span>
+                            </div>
+                        )}
+
                         {isAdmin || user ? (
                             <div className="flex items-center gap-3">
                                 {user && (
@@ -108,10 +120,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                 )}
                                 <button
                                     onClick={logout}
-                                    className="flex items-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors text-sm font-bold"
+                                    className="flex items-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors text-sm font-bold whitespace-nowrap"
                                 >
                                     <LogOut className="w-4 h-4" />
-                                    <span className="hidden sm:inline">خروج</span>
+                                    <span className="hidden sm:inline">تسجيل خروج</span>
                                 </button>
                             </div>
                         ) : (

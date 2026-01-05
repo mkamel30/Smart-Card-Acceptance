@@ -21,6 +21,16 @@ export default function Login() {
         try {
             const res = await api.post('/auth/login', { username, password });
             login(res.data.token, res.data.user);
+
+            // Auto-set branch context if applicable
+            const user = res.data.user;
+            if (user.role === 'BRANCH_MANAGER' && user.branches && user.branches.length === 1) {
+                localStorage.setItem('selectedBranchId', user.branches[0].id);
+                localStorage.setItem('selectedBranchName', user.branches[0].name);
+            } else if (user.role === 'ADMIN') {
+                localStorage.setItem('selectedBranchName', 'الإدارة العامة');
+            }
+
             navigate('/branch-dashboard');
         } catch (err: any) {
             setError(err.response?.data?.error || 'فشل تسجيل الدخول');
