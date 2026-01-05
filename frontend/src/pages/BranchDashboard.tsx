@@ -34,12 +34,16 @@ export default function BranchDashboard() {
         // Fetch branches only if user has permission to see multiple or select
         if (canSelectBranch) {
             fetchBranches();
+            loadData();
         } else if (user?.branches?.length === 1) {
             // Use functional update or set directly
             const b = user.branches[0];
-            setSelectedBranches([{ value: b.id, label: b.name }]);
+            const branchOption = { value: b.id, label: b.name };
+            setSelectedBranches([branchOption]);
+            loadData([branchOption]);
+        } else {
+            loadData();
         }
-        loadData();
     }, [user, isAdmin]);
 
     const fetchBranches = async () => {
@@ -55,17 +59,13 @@ export default function BranchDashboard() {
         }
     };
 
-    const loadData = async () => {
+    const loadData = async (overrideBranches?: any[]) => {
         setLoading(true);
         try {
-            // Logic:
-            // 1. If user selected branches, use them.
-            // 2. If user is restricted to 1 branch, use it automatically (API handles this securely via token, but we can be explicit if needed).
-            // 3. If user is Admin/Multi-Branch and selected nothing, API usually returns ALL or User's ALLOWED.
-            //    Our backend controller handles `if (role === BRANCH_MANAGER) query.branchId = { in: user.allowedBranches }`.
+            const effectiveBranches = overrideBranches || selectedBranches;
 
             const params = {
-                branches: selectedBranches.map(b => b.value),
+                branches: effectiveBranches.map(b => b.value),
                 dateFrom,
                 dateTo,
                 status,
@@ -462,9 +462,8 @@ export default function BranchDashboard() {
                     </div>
                 </div>
             </div>
-        </div>
 
-            {/* Transactions Table */ }
+            {/* Transactions Table */}
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="text-lg font-bold text-gray-800">أحدث المعاملات</h3>
@@ -512,12 +511,11 @@ export default function BranchDashboard() {
                                         {Number(tx.totalAmount).toLocaleString()} ج.m
                                     </td>
                                     <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                            tx.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                            tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                                            tx.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                                            'bg-blue-100 text-blue-700'
-                                        }`}>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${tx.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                                tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                                                    tx.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                                        'bg-blue-100 text-blue-700'
+                                            }`}>
                                             {tx.status}
                                         </span>
                                     </td>
