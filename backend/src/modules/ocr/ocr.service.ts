@@ -109,32 +109,13 @@ export class OCRService {
         let text = '';
         let paddleData: any = null;
 
-        // --- Step A: Try PaddleOCR Service (Free & Local/Self-hosted) ---
-        try {
-            const PADDLE_URL = process.env.PADDLE_OCR_URL || 'http://localhost:5000/scan';
-            console.log(`Attempting PaddleOCR at ${PADDLE_URL}...`);
-            const pFormData = new FormData();
-            pFormData.append('file', ocrBuffer, { filename: 'receipt.png' });
-
-            const pResponse = await axios.post(PADDLE_URL, pFormData, {
-                headers: { ...pFormData.getHeaders() },
-                timeout: 3000 // 3s timeout (Fast local or fail)
-            });
-
-            if (pResponse.data && pResponse.data.success) {
-                text = pResponse.data.rawText || '';
-                paddleData = pResponse.data.data;
-                console.log('PaddleOCR Success');
-            }
-        } catch (err) {
-            console.warn('PaddleOCR failed or not running:', (err as any).message);
-        }
-
-        // --- Step B: Try OCR.space (Online Free/Paid API) ---
+        // --- Step A: Try OCR.space (Primary Engine) ---
         const OCR_SPACE_KEY = process.env.OCR_SPACE_API_KEY;
-        if (!text && OCR_SPACE_KEY && publicUrl) {
+        const usedEngine = 'OCR.space';
+
+        if (OCR_SPACE_KEY && publicUrl) {
             try {
-                console.log('Attempting OCR.space via Public URL...');
+                console.log('Attempting OCR.space...');
                 const osFormData = new FormData();
                 osFormData.append('url', publicUrl);
                 osFormData.append('language', 'eng');
@@ -143,7 +124,7 @@ export class OCRService {
 
                 const osResponse = await axios.post('https://api.ocr.space/parse/image', osFormData, {
                     headers: { ...osFormData.getHeaders(), 'apikey': OCR_SPACE_KEY },
-                    timeout: 8000
+                    timeout: 10000
                 });
 
                 if (osResponse.data?.ParsedResults?.[0]?.ParsedText) {
@@ -155,7 +136,7 @@ export class OCRService {
             }
         }
 
-        // --- Step C: Fallback to Tesseract.js (Free & Built-in) ---
+        // --- Step B: Fallback to Tesseract.js (Emergency Fallback) ---
         if (!text) {
             try {
                 console.log('Falling back to Tesseract.js...');
@@ -170,29 +151,15 @@ export class OCRService {
         // 3. Parse and Merge Results
         const parsedData = this.parseReceiptText(text);
 
-        // Hybrid Merge: If PaddleOCR provided structured data, use it to fill gaps
-        if (paddleData) {
-            if (paddleData.merchantCode) parsedData.merchantCode = paddleData.merchantCode;
-            if (paddleData.terminalId) parsedData.terminalId = paddleData.terminalId;
-            if (paddleData.batchNumber) parsedData.batchNumber = paddleData.batchNumber;
-            if (paddleData.approvalNumber) parsedData.approvalNumber = paddleData.approvalNumber;
-            if (paddleData.totalAmount) parsedData.totalAmount = paddleData.totalAmount;
-            if (paddleData.date) parsedData.date = paddleData.date;
-            if (paddleData.time) parsedData.time = paddleData.time;
-            if (paddleData.last4Digits) parsedData.last4Digits = paddleData.last4Digits;
-            if (paddleData.rrn) parsedData.rrn = paddleData.rrn;
-        }
-
         if (publicUrl) parsedData.imageUrl = publicUrl;
 
-        let usedEngine = 'Tesseract.js';
-        if (paddleData) usedEngine = 'PaddleOCR';
-        else if (text && OCR_SPACE_KEY) usedEngine = 'OCR.space';
+        // Determine which engine actually provided the text
+        const finalEngine = (text && OCR_SPACE_KEY && !text.includes('Tesseract.js')) ? 'OCR.space' : 'Tesseract.js';
 
         return {
             data: parsedData,
             rawText: text,
-            engine: usedEngine
+            engine: finalEngine
         };
     }
 
