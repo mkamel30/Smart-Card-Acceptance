@@ -46,8 +46,8 @@ export default function Login() {
                     <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 transform rotate-3 hover:rotate-0 transition-transform">
                         <ShieldCheck className="w-10 h-10 text-primary" />
                     </div>
-                    <h1 className="text-3xl font-black text-gray-900">تسجيل دخول المديرين</h1>
-                    <p className="text-gray-500 mt-3 font-medium">نظام إدارة فروع تسوية البطاقات</p>
+                    <h1 className="text-3xl font-black text-gray-900">تسجيل الدخول</h1>
+                    <p className="text-gray-500 mt-3 font-medium">نظام قبول البطاقات الذكية</p>
                 </div>
 
                 {error && (
@@ -106,7 +106,7 @@ export default function Login() {
                         onClick={() => navigate('/select-branch')}
                         className="text-sm text-gray-400 hover:text-primary transition-colors font-medium border-b border-transparent hover:border-primary"
                     >
-                        العودة لاختيار الفرع (للكاشير)
+                        العودة لاختيار الفرع
                     </button>
                 </div>
             </div>

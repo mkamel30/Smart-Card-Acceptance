@@ -28,9 +28,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     const navItems = [
         { name: 'الرئيسية', path: '/', icon: LayoutDashboard },
-        { name: isMultiBranch ? 'إدارة الفروع' : 'لوحة المعلومات', path: '/branch-dashboard', icon: LayoutDashboard },
         { name: 'تسوية جديدة', path: '/settlement/new', icon: FilePlus },
         { name: 'سجل الباتشات', path: '/batches', icon: ScrollText },
+        { name: isMultiBranch ? 'إدارة الفروع' : 'لوحة المعلومات', path: '/branch-dashboard', icon: LayoutDashboard },
     ];
 
     const closeSidebar = () => setSidebarOpen(false);
@@ -60,7 +60,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
                     <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
                         <img src="/logo.png" alt="Logo" className="w-10 h-10 ml-2 object-contain" />
-                        <span className="text-xl font-bold">نظام التسويات</span>
+                        <span className="text-xl font-bold">نظام قبول البطاقات</span>
                     </Link>
                     <button onClick={closeSidebar} className="lg:hidden text-gray-500">
                         <X className="w-6 h-6" />
