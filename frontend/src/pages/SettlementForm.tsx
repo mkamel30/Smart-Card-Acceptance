@@ -249,6 +249,11 @@ export default function SettlementWorkFlow() {
                                 >
                                     {scanning ? <Loader2 className="w-4 h-4 animate-spin inline ml-1" /> : <Zap className="w-4 h-4 inline ml-1" />}
                                     مسح OCR
+                                    {ocrEngine && !scanning && (
+                                        <span className="mr-2 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded border border-blue-100 animate-fade-in">
+                                            بواسطة: {ocrEngine === 'PaddleOCR' ? 'محرك ذكي 🧠' : 'محرك ثانوي 🐢'}
+                                        </span>
+                                    )}
                                 </button>
                             </div>
                             <input type="file" ref={fileInputRef} onChange={handleOCRUpload} className="hidden" accept="image/*" />
