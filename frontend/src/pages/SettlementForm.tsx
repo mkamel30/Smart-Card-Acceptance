@@ -132,8 +132,6 @@ export default function SettlementWorkFlow() {
 
     const applyOCR = (ocrData: any) => {
         setEntryMode('manual');
-        if (ocrData.merchantCode) setValue('merchantCode', ocrData.merchantCode);
-        if (ocrData.merchantCode) setValue('merchantName', ocrData.merchantCode); // Use MID as name placeholder
         if (ocrData.batchNumber) setValue('batchNumber', ocrData.batchNumber);
         if (ocrData.approvalNumber) setValue('approvalNumber', ocrData.approvalNumber);
         if (ocrData.rrn) setValue('referenceNumber', ocrData.rrn);
