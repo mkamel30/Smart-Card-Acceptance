@@ -29,6 +29,7 @@ export default function TransactionReceipt() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handlePrint = useReactToPrint({
+        // @ts-ignore
         content: () => componentRef.current,
         documentTitle: `Receipt_${id}`,
     });

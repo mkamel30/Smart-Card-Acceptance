@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '@/api/client';
-import { Printer, Download, ArrowRight } from 'lucide-react';
+import { Printer, ArrowRight } from 'lucide-react';
 
 interface Transaction {
     id: string;

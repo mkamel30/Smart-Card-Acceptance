@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FilePlus, Settings as SettingsIcon, ScrollText } from 'lucide-react';
+import { LayoutDashboard, FilePlus, ScrollText } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

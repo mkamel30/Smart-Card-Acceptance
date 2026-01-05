@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, X, CheckCircle2, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, CheckCircle2, Loader2 } from 'lucide-react';
 import api from '@/api/client';
 
 export default function ReceiptUpload() {
