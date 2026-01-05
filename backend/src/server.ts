@@ -43,11 +43,20 @@ app.get('/health', (req, res) => {
 });
 
 import path from 'path';
+import fs from 'fs';
 
 // Serve Static Frontend Files
-app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(frontendPath)) {
+    app.use(express.static(frontendPath));
+}
 
 // API Routes (Ensure these are defined)
+
+// Root Health Check (Important for Render)
+app.get('/', (req, res) => {
+    res.status(200).json({ status: 'active', message: 'Card Settlement API is running' });
+});
 
 // Handle React Routing, return all requests to React app
 // Place this AFTER API routes so API requests aren't intercepted
@@ -55,7 +64,15 @@ app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) {
         return next();
     }
-    res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+
+    // If frontend is built and available, serve index.html
+    const indexPath = path.join(frontendPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+    }
+
+    // Otherwise return 404 (Backend-only mode)
+    res.status(404).json({ message: 'Frontend not found or API route not accepted' });
 });
 
 // Error Handling
