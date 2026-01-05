@@ -101,6 +101,19 @@ export class AnalyticsService {
             }))
         };
     }
+    async getExportData(filters: any) {
+        return await prisma.settlement.findMany({
+            where: filters,
+            include: {
+                branch: {
+                    select: { name: true, code: true }
+                }
+            },
+            orderBy: {
+                settlementDate: 'desc'
+            }
+        });
+    }
 }
 
 export default new AnalyticsService();

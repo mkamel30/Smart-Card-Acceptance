@@ -26,11 +26,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         api.get('/info').then(res => setClientInfo(res.data)).catch(() => { });
     }, [location]);
 
-    const navItems = [
+    const navItems = isMultiBranch ? [
+        { name: 'إدارة الفروع', path: '/branch-dashboard', icon: LayoutDashboard },
+    ] : [
         { name: 'الرئيسية', path: '/', icon: LayoutDashboard },
         { name: 'تسوية جديدة', path: '/settlement/new', icon: FilePlus },
         { name: 'سجل الباتشات', path: '/batches', icon: ScrollText },
-        { name: isMultiBranch ? 'إدارة الفروع' : 'لوحة المعلومات', path: '/branch-dashboard', icon: LayoutDashboard },
+        { name: 'لوحة المعلومات', path: '/branch-dashboard', icon: LayoutDashboard },
     ];
 
     const closeSidebar = () => setSidebarOpen(false);

@@ -7,7 +7,7 @@ import {
 import Select from 'react-select';
 import {
     LayoutDashboard, Calendar, Briefcase, Landmark, CreditCard,
-    ArrowUpRight, TrendingUp, RefreshCw
+    ArrowUpRight, TrendingUp, RefreshCw, Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/context/AdminContext';
@@ -89,6 +89,32 @@ export default function BranchDashboard() {
         setBank('');
     };
 
+    const handleExport = async () => {
+        try {
+            const params = {
+                branches: selectedBranches.map(b => b.value),
+                dateFrom,
+                dateTo,
+                status,
+                bankName: bank
+            };
+            const response = await api.get('/analytics/export', {
+                params,
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `settlements-export-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err) {
+            console.error('Export failed', err);
+        }
+    };
+
     const MetricCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between group hover:shadow-md transition-all">
             <div className="space-y-2">
@@ -145,6 +171,13 @@ export default function BranchDashboard() {
                         </div>
                     )}
                     <div className="flex gap-2">
+                        <button
+                            onClick={handleExport}
+                            className="flex-1 sm:flex-none bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 whitespace-nowrap"
+                        >
+                            <Download className="w-4 h-4" />
+                            تصدير Excel
+                        </button>
                         <button
                             onClick={handleApplyFilters}
                             className="flex-1 sm:flex-none bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 whitespace-nowrap"

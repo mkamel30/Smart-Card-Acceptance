@@ -25,6 +25,62 @@ export class AnalyticsController {
         }
     }
 
+    async exportSettlements(req: Request, res: Response, next: NextFunction) {
+        try {
+            const user = (req as any).user;
+            const filters = this.parseFilters(req.query, user);
+            const data = await analyticsService.getExportData(filters);
+
+            const ExcelJS = require('exceljs');
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Settlements');
+
+            worksheet.columns = [
+                { header: 'التاريخ', key: 'date', width: 15 },
+                { header: 'الفرع', key: 'branch', width: 20 },
+                { header: 'البنك', key: 'bank', width: 15 },
+                { header: 'نوع البطاقة', key: 'card', width: 15 },
+                { header: 'كود التاجر', key: 'mid', width: 15 },
+                { header: 'الإجمالي', key: 'total', width: 15 },
+                { header: 'الرسوم', key: 'fees', width: 15 },
+                { header: 'الصافي', key: 'net', width: 15 },
+                { header: 'الحالة', key: 'status', width: 15 },
+                { header: 'رقم المرجع', key: 'ref', width: 20 },
+            ];
+
+            // Style header
+            worksheet.getRow(1).font = { bold: true };
+            worksheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+
+            data.forEach((item: any) => {
+                worksheet.addRow({
+                    date: item.settlementDate.toISOString().split('T')[0],
+                    branch: item.branch?.name || '-',
+                    bank: item.bankName || '-',
+                    card: item.cardType || '-',
+                    mid: item.merchantCode || '-',
+                    total: Number(item.totalAmount),
+                    fees: Number(item.fees),
+                    net: Number(item.netAmount),
+                    status: item.status,
+                    ref: item.referenceNumber || '-'
+                });
+            });
+
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', 'attachment; filename=settlements-export.xlsx');
+
+            await workbook.xlsx.write(res);
+            res.end();
+        } catch (error) {
+            next(error);
+        }
+    }
+
     private parseFilters(query: any, user?: any) {
         const filters: any = {};
 
