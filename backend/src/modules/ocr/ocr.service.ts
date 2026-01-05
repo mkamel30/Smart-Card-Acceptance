@@ -130,38 +130,7 @@ export class OCRService {
             console.warn('PaddleOCR failed or not running:', (err as any).message);
         }
 
-        // --- Step B: Try Google Vision API (Paid) ---
-        const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-
-        if (GOOGLE_API_KEY && !text) {
-            try {
-                console.log('Attempting Google Vision OCR...');
-                const start = Date.now();
-                const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        requests: [{
-                            image: { content: ocrBuffer.toString('base64') },
-                            features: [{ type: 'TEXT_DETECTION' }]
-                        }]
-                    })
-                });
-
-                const result: any = await response.json();
-
-                if (result.responses?.[0]?.fullTextAnnotation?.text) {
-                    text = result.responses[0].fullTextAnnotation.text;
-                    console.log(`Google Vision Success (${Date.now() - start}ms)`);
-                }
-            } catch (err) {
-                console.warn('Google Vision failed:', err);
-            }
-        } else if (!GOOGLE_API_KEY && !text) {
-            console.log('Skipping Google Vision OCR: GOOGLE_API_KEY is not set');
-        }
-
-        // --- Step C: Fallback to Tesseract.js (Free & Built-in) ---
+        // --- Step B: Fallback to Tesseract.js (Free & Built-in) ---
         if (!text) {
             try {
                 console.log('Falling back to Tesseract.js...');
