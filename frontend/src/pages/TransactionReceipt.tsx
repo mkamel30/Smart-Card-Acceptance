@@ -17,6 +17,9 @@ interface Settlement {
     receipt?: {
         imageUrl: string;
     };
+    branch?: {
+        name: string;
+    };
 }
 
 export default function TransactionReceipt() {
