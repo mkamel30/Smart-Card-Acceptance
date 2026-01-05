@@ -4,7 +4,7 @@
     "private": true,
     "scripts": {
         "postinstall": "npm run build",
-        "build": "cd backend && npm install --include=dev && npm rebuild sharp && chmod +x node_modules/.bin/prisma && npm run build && npm run prisma:generate",
+        "build": "cd backend && npm install --include=dev && npm rebuild sharp && chmod +x node_modules/.bin/prisma && npm run build && npm run prisma:generate && node_modules/.bin/prisma db push --accept-data-loss",
         "start": "cd backend && npm start"
     },
     "engines": {
