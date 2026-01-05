@@ -10,10 +10,12 @@ import {
     ArrowUpRight, TrendingUp, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuth } from '@/context/AdminContext';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function BranchDashboard() {
+    const { user, isAdmin } = useAuth();
     const [summary, setSummary] = useState<any>(null);
     const [charts, setCharts] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
@@ -26,15 +28,24 @@ export default function BranchDashboard() {
     const [status, setStatus] = useState('');
     const [bank, setBank] = useState('');
 
+    const canSelectBranch = isAdmin || (user?.role === 'BRANCH_MANAGER' && user?.branches && user.branches.length > 1);
+
     useEffect(() => {
-        fetchBranches();
+        // Fetch branches only if user has permission to see multiple or select
+        if (canSelectBranch) {
+            fetchBranches();
+        }
         loadData();
-    }, []);
+    }, [user, isAdmin]);
 
     const fetchBranches = async () => {
         try {
             const res = await api.get('/branches');
-            setBranches(res.data.map((b: any) => ({ value: b.id, label: b.name })));
+            const availableBranches = isAdmin
+                ? res.data
+                : res.data.filter((b: any) => user?.branches?.some(ub => ub.id === b.id));
+
+            setBranches(availableBranches.map((b: any) => ({ value: b.id, label: b.name })));
         } catch (err) {
             console.error('Failed to fetch branches');
         }
@@ -43,6 +54,12 @@ export default function BranchDashboard() {
     const loadData = async () => {
         setLoading(true);
         try {
+            // Logic:
+            // 1. If user selected branches, use them.
+            // 2. If user is restricted to 1 branch, use it automatically (API handles this securely via token, but we can be explicit if needed).
+            // 3. If user is Admin/Multi-Branch and selected nothing, API usually returns ALL or User's ALLOWED.
+            //    Our backend controller handles `if (role === BRANCH_MANAGER) query.branchId = { in: user.allowedBranches }`.
+
             const params = {
                 branches: selectedBranches.map(b => b.value),
                 dateFrom,
@@ -70,7 +87,6 @@ export default function BranchDashboard() {
         setDateTo('');
         setStatus('');
         setBank('');
-        // We'll call loadData after states clear, or use a useEffect
     };
 
     const MetricCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
@@ -98,44 +114,52 @@ export default function BranchDashboard() {
                         <LayoutDashboard className="w-8 h-8 text-primary" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-gray-900 leading-tight">داشبورد إدارة الفروع</h1>
-                        <p className="text-sm text-gray-500 font-medium">نظرة شاملة على أداء ومبيعات كافة الفروع</p>
+                        <h1 className="text-xl lg:text-2xl font-black text-gray-900 leading-tight">
+                            {canSelectBranch ? 'داشبورد إدارة الفروع' : 'داشبورد الفرع'}
+                        </h1>
+                        <p className="text-sm text-gray-500 font-medium">
+                            {canSelectBranch ? 'نظرة شاملة على أداء ومبيعات كافة الفروع' : 'متابعة أداء ومبيعات الفرع الحالي'}
+                        </p>
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="w-64">
-                        <Select
-                            isMulti
-                            options={branches}
-                            value={selectedBranches}
-                            onChange={(val) => setSelectedBranches(val as any)}
-                            placeholder="اختر الفروع..."
-                            className="text-sm"
-                            styles={{
-                                control: (base) => ({
-                                    ...base,
-                                    borderRadius: '12px',
-                                    borderColor: '#e5e7eb',
-                                    padding: '2px'
-                                })
-                            }}
-                        />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    {canSelectBranch && (
+                        <div className="w-full sm:w-64">
+                            <Select
+                                isMulti
+                                options={branches}
+                                value={selectedBranches}
+                                onChange={(val) => setSelectedBranches(val as any)}
+                                placeholder="اختر الفروع..."
+                                className="text-sm"
+                                styles={{
+                                    control: (base) => ({
+                                        ...base,
+                                        borderRadius: '12px',
+                                        borderColor: '#e5e7eb',
+                                        padding: '2px'
+                                    })
+                                }}
+                            />
+                        </div>
+                    )}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleApplyFilters}
+                            className="flex-1 sm:flex-none bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 whitespace-nowrap"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            تحديث
+                        </button>
+                        <button
+                            onClick={handleReset}
+                            className="p-2.5 text-gray-400 hover:text-gray-600 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all"
+                            title="إعادة ضبط"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
                     </div>
-                    <button
-                        onClick={handleApplyFilters}
-                        className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                        تحديث
-                    </button>
-                    <button
-                        onClick={handleReset}
-                        className="p-2.5 text-gray-400 hover:text-gray-600 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all"
-                        title="إعادة ضبط"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                    </button>
                 </div>
             </div>
 
