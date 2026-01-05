@@ -38,7 +38,7 @@ export default function ReceiptUpload() {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setExtractedData(res.data);
-        } catch (error) {
+        } catch {
             alert('فشل معالجة الوصول');
         } finally {
             setUploading(false);
