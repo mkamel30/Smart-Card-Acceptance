@@ -162,7 +162,8 @@ export class OCRService {
 
         return {
             data: parsedData,
-            rawText: text
+            rawText: text,
+            engine: paddleData ? 'PaddleOCR' : 'Tesseract.js'
         };
     }
 

@@ -22,7 +22,8 @@ export class OCRController {
             res.status(200).json({
                 success: true,
                 data: result.data,
-                rawText: result.rawText
+                rawText: result.rawText,
+                engine: result.engine
             });
         } catch (error) {
             next(error);

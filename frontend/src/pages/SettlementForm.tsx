@@ -43,6 +43,7 @@ export default function SettlementWorkFlow() {
     const [settling, setSettling] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [recentSettlements, setRecentSettlements] = useState<any[]>([]);
+    const [ocrEngine, setOcrEngine] = useState<string | null>(null);
 
     const getImageUrl = (s: z.infer<typeof settlementSchema> | any) => {
         const path = s.receipt?.imageUrl || s.receiptImageUrl;
@@ -169,10 +170,12 @@ export default function SettlementWorkFlow() {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             applyOCR(res.data.data);
+            setOcrEngine(res.data.engine); // Save which engine was used
         } catch (err) {
             alert('فشل قراءة الإيصال، يرجى الإدخال يدوياً');
         } finally {
             setScanning(false);
+            if (e.target) e.target.value = ''; // Reset input to allow same file scan
         }
     };
 
@@ -248,6 +251,11 @@ export default function SettlementWorkFlow() {
                                 >
                                     {scanning ? <Loader2 className="w-4 h-4 animate-spin inline ml-1" /> : <Zap className="w-4 h-4 inline ml-1" />}
                                     مسح OCR
+                                    {ocrEngine && !scanning && (
+                                        <span className="mr-2 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded border border-blue-100 animate-fade-in">
+                                            بواسطة: {ocrEngine === 'PaddleOCR' ? 'محرك ذكي 🧠' : 'محرك ثانوي 🐢'}
+                                        </span>
+                                    )}
                                 </button>
                             </div>
                             <input type="file" ref={fileInputRef} onChange={handleOCRUpload} className="hidden" accept="image/*" />
