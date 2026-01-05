@@ -41,7 +41,7 @@ export class AuthController {
         }
     }
 
-    async setupInitialAdmin(req: Request, res: Response, next: NextFunction) {
+    async setupInitialAdmin(_req: Request, res: Response, next: NextFunction) {
         try {
             // const { secret } = req.body;
             // if (secret !== process.env.ADMIN_PASSWORD) {
