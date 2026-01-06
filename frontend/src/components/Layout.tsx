@@ -32,7 +32,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { name: 'العمليات', path: '/', icon: LayoutDashboard },
         { name: 'تسوية جديدة', path: '/settlement/new', icon: FilePlus },
         { name: 'سجل الباتشات', path: '/batches', icon: ScrollText },
-        { name: 'الإحصائيات', path: '/branch-dashboard', icon: TrendingUp },
+        { name: 'الإحصائيات', path: '/stats', icon: TrendingUp },
     ];
 
     const closeSidebar = () => setSidebarOpen(false);

@@ -9,6 +9,7 @@ import TransactionReceipt from './pages/TransactionReceipt';
 import Batches from './pages/Batches';
 import SelectBranch from './pages/SelectBranch';
 import BranchDashboard from './pages/BranchDashboard';
+import BranchStats from './pages/BranchStats';
 import Login from './pages/Login';
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ function App() {
                             <Layout>
                                 <Routes>
                                     <Route path="/" element={<Dashboard />} />
+                                    <Route path="/stats" element={<BranchStats />} />
                                     <Route path="/batches" element={<Batches />} />
                                     <Route path="/branch-dashboard" element={<BranchDashboard />} />
                                     <Route path="/settlement/new" element={<SettlementForm />} />
