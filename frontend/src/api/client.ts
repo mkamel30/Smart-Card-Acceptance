@@ -50,8 +50,8 @@ api.interceptors.response.use(
             console.error('Session expired or unauthorized');
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            // Force reload to clear context
-            window.location.href = '/';
+            // Redirect to login explicitly
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }

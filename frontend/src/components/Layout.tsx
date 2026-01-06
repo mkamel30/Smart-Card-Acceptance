@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FilePlus, ScrollText, Settings, LogOut, Menu, X, Building2 } from 'lucide-react';
+import { LayoutDashboard, FilePlus, ScrollText, Settings, LogOut, Menu, X, Building2, TrendingUp } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAdmin } from '../context/AdminContext';
@@ -29,10 +29,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const navItems = isMultiBranch ? [
         { name: 'إدارة الفروع', path: '/branch-dashboard', icon: LayoutDashboard },
     ] : [
-        { name: 'الرئيسية', path: '/', icon: LayoutDashboard },
+        { name: 'العمليات', path: '/', icon: LayoutDashboard },
         { name: 'تسوية جديدة', path: '/settlement/new', icon: FilePlus },
         { name: 'سجل الباتشات', path: '/batches', icon: ScrollText },
-        { name: 'لوحة المعلومات', path: '/branch-dashboard', icon: LayoutDashboard },
+        { name: 'الإحصائيات', path: '/branch-dashboard', icon: TrendingUp },
     ];
 
     const closeSidebar = () => setSidebarOpen(false);

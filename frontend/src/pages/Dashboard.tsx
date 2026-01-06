@@ -4,6 +4,7 @@ import { Download, Mail, Edit2, Filter, Zap, Loader2, Printer, Trash2, Image } f
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/context/AdminContext';
 import EditSettlementModal from '@/components/EditSettlementModal';
+import { format } from 'date-fns';
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -78,15 +79,12 @@ export default function Dashboard() {
         }
     };
 
-    const handleSendEmail = async (id: string) => {
-        if (!confirm('هل أنت متأكد من إرسال هذا التقرير عبر البريد الإلكتروني؟')) return;
-        try {
-            await api.post(`/email/send/${id}`);
-            alert('تم إرسال البريد الإلكتروني بنجاح');
-            fetchSettlements();
-        } catch (err) {
-            alert('فشل إرسال البريد الإلكتروني. يرجى التأكد من إعدادات SMTP.');
-        }
+    const handleSendEmail = (s: any) => {
+        const subject = `تقرير تسوية - ${s.merchantCode} - ${format(new Date(s.settlementDate), 'yyyy/MM/dd')}`;
+        const body = `السادة الزملاء،%0D%0A%0D%0Aيرجى العلم ببيانات التسوية التالية:%0D%0A%0D%0Aالتاريخ: ${format(new Date(s.settlementDate), 'yyyy/MM/dd')}%0D%0Aكود التاجر: ${s.merchantCode}%0D%0Aالمبلغ الصافي: ${Number(s.netAmount).toLocaleString()} ج.م%0D%0Aالباتش: ${s.batchNumber || '---'} / الموافقة: ${s.approvalNumber || '---'}%0D%0Aالحالة: ${s.status}%0D%0A%0D%0Aمع التحية.`;
+
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        // toggle "emailSent" visually? No API to update it if we just open mailto.
     };
 
     return (
@@ -213,7 +211,7 @@ export default function Dashboard() {
                                     <button onClick={() => window.open(`/settlement/${s.id}/print`, '_blank')} className="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="طباعة الإيصال">
                                         <Printer className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => handleSendEmail(s.id)} className="p-2 text-gray-400 hover:text-primary transition-colors" title="إرسال إيميل">
+                                    <button onClick={() => handleSendEmail(s)} className="p-2 text-gray-400 hover:text-primary transition-colors" title="إرسال عبر Outlook">
                                         <Mail className="w-4 h-4" />
                                     </button>
                                     <a href={`/api/exports/pdf/${s.id}`} target="_blank" rel="noreferrer" className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="تقرير PDF">
