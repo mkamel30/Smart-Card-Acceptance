@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -16,6 +17,17 @@ const queryClient = new QueryClient();
 
 // Guard to ensure branch is selected
 function RequireBranch({ children }: { children: JSX.Element }) {
+    // Clear session on refresh (Page Reload)
+    useEffect(() => {
+        const perf = window.performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
+        if (perf && perf.type === 'reload') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('selectedBranchId');
+            window.location.href = '/login';
+        }
+    }, []);
+
     const branchId = localStorage.getItem('selectedBranchId');
     const token = localStorage.getItem('token');
     const location = useLocation();
