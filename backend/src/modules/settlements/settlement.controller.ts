@@ -157,7 +157,7 @@ export class SettlementController {
         }
     }
 
-    async syncFees(req: Request, res: Response, next: NextFunction) {
+    async syncFees(_req: Request, res: Response, next: NextFunction) {
         try {
             console.log('[SettlementController] Starting syncFees process...');
 
