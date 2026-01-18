@@ -12,6 +12,7 @@ export interface ExtractedReceiptData {
     approvalNumber?: string;
     rrn?: string;
     totalAmount?: number;
+    cardBin?: string;
     last4Digits?: string;
     date?: string;
     time?: string;
@@ -259,13 +260,35 @@ export class OCRService {
         const batchMatch = digitFocusText.match(/(?:Batch|الباتش|رقم الباتش)\s*(?:NO|#)?[:\.\s]*(\d{1,6})/i);
         if (batchMatch) data.batchNumber = batchMatch[1];
 
-        // 8. LAST 4 DIGITS
+        // 8. CARD NUMBERS (BIN & LAST 4)
+        const fullCardMatch = digitFocusText.match(/(?:Card|Card No|PAN|المسلسل)[:\.\s]*(\d{4})[\*xX\.\-\s]{1,12}(\d{4})\b/i);
         const last4Match = digitFocusText.match(/(?:[\*xX\.\-\s]{4,}|Card|Card No|PAN)[:\.\s]*\d*(\d{4})\b/i);
-        if (last4Match) {
-            data.last4Digits = last4Match[1];
+
+        if (fullCardMatch) {
+            // Some receipts show XXXX **** **** 1234 or similar
+            // If we find a full-ish pattern, we might get the BIN
+        }
+
+        // BIN (First 6 digits)
+        const binMatch = digitFocusText.match(/\b(4\d{5}|5\d{5})\b/); // Simplified: starts with 4 or 5
+        if (binMatch) {
+            data.cardBin = binMatch[1];
         } else {
-            const standalone4 = digitFocusText.match(/\b\d{4}$/m);
-            if (standalone4) data.last4Digits = standalone4[0];
+            // Try to find the first 6 digits of a 16-digit like string
+            const panMatch = digitFocusText.match(/\b(\d{6})[\*xX\s]{6,10}(\d{4})\b/);
+            if (panMatch) {
+                data.cardBin = panMatch[1];
+                data.last4Digits = panMatch[2];
+            }
+        }
+
+        if (!data.last4Digits) {
+            if (last4Match) {
+                data.last4Digits = last4Match[1];
+            } else {
+                const standalone4 = digitFocusText.match(/\b\d{4}$/m);
+                if (standalone4) data.last4Digits = standalone4[0];
+            }
         }
 
         // 9. RRN

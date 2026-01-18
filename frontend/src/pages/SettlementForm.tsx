@@ -14,6 +14,7 @@ const settlementSchema = z.object({
     settledAmount: z.number().positive('المبلغ مطلوب'),
     approvalNumber: z.string().optional(),
     batchNumber: z.string().optional(),
+    cardBin: z.string().optional(),
     last4Digits: z.string().length(4, 'يجب إدخال 4 أرقام').optional(),
     // Hidden/Defaulted fields
     serviceCategory: z.string().default('SMART'),
@@ -152,6 +153,7 @@ export default function SettlementWorkFlow() {
         if (ocrData.batchNumber) setValue('batchNumber', ocrData.batchNumber);
         if (ocrData.approvalNumber) setValue('approvalNumber', ocrData.approvalNumber);
         if (ocrData.rrn) setValue('referenceNumber', ocrData.rrn);
+        if (ocrData.cardBin) setValue('cardBin', ocrData.cardBin);
         if (ocrData.last4Digits) setValue('last4Digits', ocrData.last4Digits);
         if (ocrData.totalAmount) setValue('settledAmount', ocrData.totalAmount);
 
@@ -305,6 +307,8 @@ export default function SettlementWorkFlow() {
                                         <option value="سداد قطع الغيار و مصاريف الصيانة">سداد قطع الغيار و مصاريف الصيانة</option>
                                         <option value="سداد قيمة مبيعات الماكينات">سداد قيمة مبيعات الماكينات</option>
                                         <option value="سداد اقساط المرابحة">سداد اقساط المرابحة</option>
+                                        <option value="سداد مقدم قسط">سداد مقدم قسط</option>
+                                        <option value="سداد قيمة شريحة بيانات">سداد قيمة شريحة بيانات</option>
                                         <option value="سداد فروق التصنيع">سداد فروق التصنيع</option>
                                         <option value="الغرامات (المخابز و التجار)">الغرامات (المخابز و التجار)</option>
                                     </select>
@@ -334,10 +338,16 @@ export default function SettlementWorkFlow() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="label-sm">آخر 4 أرقام من البطاقة</label>
-                                    <input type="text" maxLength={4} {...register('last4Digits')} className="input font-mono text-center tracking-widest text-lg w-full" placeholder="XXXX" />
-                                    {errors.last4Digits && <p className="error-text">{errors.last4Digits.message}</p>}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="label-sm">أول 6 أرقام (BIN)</label>
+                                        <input type="text" maxLength={6} {...register('cardBin')} className="input font-mono text-center tracking-widest text-lg w-full" placeholder="XXXXXX" />
+                                    </div>
+                                    <div>
+                                        <label className="label-sm">آخر 4 أرقام</label>
+                                        <input type="text" maxLength={4} {...register('last4Digits')} className="input font-mono text-center tracking-widest text-lg w-full" placeholder="XXXX" />
+                                    </div>
+                                    {errors.last4Digits && <p className="error-text col-span-2">{errors.last4Digits.message}</p>}
                                 </div>
                                 <div className="flex items-end">
                                     <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-4 text-lg font-black shadow-lg shadow-primary/20">

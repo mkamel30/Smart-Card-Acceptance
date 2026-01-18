@@ -46,6 +46,7 @@ export class SettlementService {
                 merchantName: data.merchantName,
                 batchNumber: data.batchNumber,
                 approvalNumber: data.approvalNumber,
+                cardBin: data.cardBin,
                 last4Digits: data.last4Digits,
                 customerName: data.customerName,
                 customerPhone: data.customerPhone,

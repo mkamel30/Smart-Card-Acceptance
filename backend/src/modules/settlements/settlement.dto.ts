@@ -15,6 +15,7 @@ export const CreateSettlementSchema = z.object({
     merchantName: z.string().optional(),
     batchNumber: z.string().optional(),
     approvalNumber: z.string().optional(),
+    cardBin: z.string().optional(),
     last4Digits: z.string().length(4, 'يجب إدخال 4 أرقام').optional(),
     customerName: z.string().optional(),
     customerPhone: z.string().optional(),

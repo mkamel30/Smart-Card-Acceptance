@@ -25,6 +25,7 @@ model Settlement {
   merchantName    String? // اسم المخبز / التاجر
   batchNumber     String? // رقم الباتش
   approvalNumber  String? // رقم الموافقة
+  cardBin         String? // أول 6 أرقام من البطاقة
   last4Digits     String? // آخر 4 أرقام من البطاقة
   customerName    String? // الاسم
   customerPhone   String? // رقم هاتف العميل
