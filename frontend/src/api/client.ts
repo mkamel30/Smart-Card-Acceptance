@@ -38,20 +38,19 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Prevent infinite loop if already on login page
-            if (!window.location.pathname.includes('/')) {
-                // do nothing? No, we should redirect.
+            const token = localStorage.getItem('token');
+
+            // Only force login if they WERE logged in (had a token)
+            if (token) {
+                console.error('Session expired or unauthorized');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            } else {
+                // If they are a guest and get a 401, maybe just go back to branch selection
+                console.warn('Unauthorized guest access');
+                // Optional: window.location.href = '/select-branch';
             }
-
-            // Clear session only if it seems invalid
-            // We can't use React Router hook here easily without more setup, so use window.location
-            // But verify we are not already redirecting
-
-            console.error('Session expired or unauthorized');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            // Redirect to login explicitly
-            window.location.href = '/login';
         }
         return Promise.reject(error);
     }

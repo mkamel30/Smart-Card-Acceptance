@@ -17,7 +17,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
         (req as AuthRequest).user = {
             id: 'legacy-admin',
             role: 'ADMIN',
-            allowedBranches: [] // Admin sees all regardless
+            allowedBranches: []
         };
         return next();
     }
@@ -36,6 +36,33 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     } catch (error) {
         return res.status(401).json({ error: 'Invalid token' });
     }
+};
+
+export const optionalAuthenticate = (req: Request, res: Response, next: NextFunction) => {
+    // 1. Check for Legacy Admin Password
+    const adminPassword = req.headers['x-admin-password'];
+    if (adminPassword && adminPassword === process.env.ADMIN_PASSWORD) {
+        (req as AuthRequest).user = {
+            id: 'legacy-admin',
+            role: 'ADMIN',
+            allowedBranches: []
+        };
+        return next();
+    }
+
+    // 2. Check for JWT Token
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+            (req as AuthRequest).user = decoded;
+        } catch (error) {
+            // If token is invalid, we'll still proceed as guest but log it
+            console.error('Invalid token in optional auth');
+        }
+    }
+    next();
 };
 
 export const requireBranchAccess = (req: Request, res: Response, next: NextFunction) => {
