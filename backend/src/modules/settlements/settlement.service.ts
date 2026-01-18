@@ -2,6 +2,8 @@ import prisma from '../../config/database';
 import { CreateSettlementInput, UpdateSettlementInput } from './settlement.dto';
 import { Settlement, SettlementWithReceipt } from '../../common/types';
 
+const FEE_RATE = 0.0115; // 1.15%
+
 // Service to handle settlement business logic
 export class SettlementService {
     async checkDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string) {
@@ -31,7 +33,10 @@ export class SettlementService {
             throw new Error(`Duplicate transaction: Transaction with Approval Number ${data.approvalNumber} already exists in Batch ${data.batchNumber}`);
         }
 
-        const netAmount = Number(data.settledAmount) - Number(data.fees || 0);
+        // Auto-calculate fees and net amount if not provided or to ensure accuracy
+        const settledAmount = Number(data.settledAmount);
+        const fees = data.fees !== undefined && data.fees > 0 ? Number(data.fees) : Math.round(settledAmount * FEE_RATE * 100) / 100;
+        const netAmount = settledAmount - fees;
 
         return (await prisma.settlement.create({
             data: {
@@ -113,18 +118,22 @@ export class SettlementService {
     async updateSettlement(id: string, data: UpdateSettlementInput) {
         const existing = await this.getSettlement(id);
 
-        let netAmount = Number(existing.netAmount);
-        if (data.settledAmount !== undefined || data.fees !== undefined) {
-            const sAmt = data.settledAmount ?? Number(existing.settledAmount);
-            const fees = data.fees ?? Number(existing.fees);
-            netAmount = sAmt - fees;
+        let settledAmount = data.settledAmount ?? Number(existing.settledAmount);
+        let fees = data.fees ?? Number(existing.fees);
+
+        // If settledAmount changed but fees didn't, re-calculate fees
+        if (data.settledAmount !== undefined && data.fees === undefined) {
+            fees = Math.round(settledAmount * FEE_RATE * 100) / 100;
         }
+
+        const netAmount = settledAmount - fees;
 
         return (await prisma.settlement.update({
             where: { id },
             data: {
                 ...data,
                 settlementDate: data.settlementDate ? new Date(data.settlementDate) : undefined,
+                fees,
                 netAmount,
                 branchId: data.branchId,
             },
@@ -205,6 +214,39 @@ export class SettlementService {
             settlements,
             totalAmount: settlements.reduce((sum, s) => sum + (Number(s.settledAmount) || 0), 0),
         };
+    }
+
+    // Sync historical data: recalculate fees for entries where fees are 0
+    async syncHistoricalFees() {
+        console.log('[SettlementService] Syncing historical fees...');
+        const settlements = await prisma.settlement.findMany({
+            where: {
+                OR: [
+                    { fees: 0 },
+                    { fees: { equals: 0 as any } }
+                ]
+            }
+        });
+
+        console.log(`[SettlementService] Found ${settlements.length} settlements to update.`);
+
+        let updatedCount = 0;
+        for (const s of settlements) {
+            const settledAmt = Number(s.settledAmount);
+            if (settledAmt === 0) continue;
+
+            const fees = Math.round(settledAmt * FEE_RATE * 100) / 100;
+            const netAmount = settledAmt - fees;
+
+            await prisma.settlement.update({
+                where: { id: s.id },
+                data: { fees, netAmount }
+            });
+            updatedCount++;
+        }
+
+        console.log(`[SettlementService] Successfully updated ${updatedCount} settlements.`);
+        return updatedCount;
     }
 }
 

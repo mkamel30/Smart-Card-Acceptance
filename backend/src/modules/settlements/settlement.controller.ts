@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import settlementService from './settlement.service';
 import { CreateSettlementSchema, UpdateSettlementSchema, SettlementStatusSchema } from './settlement.dto';
 import prisma from '../../config/database';
+import { createBackup } from '../../utils/backup';
 
 export class SettlementController {
     async create(req: Request, res: Response, next: NextFunction) {
@@ -151,6 +152,27 @@ export class SettlementController {
             const { batchNumber } = req.params;
             const result = await settlementService.settleBatch(batchNumber);
             res.json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async syncFees(req: Request, res: Response, next: NextFunction) {
+        try {
+            console.log('[SettlementController] Starting syncFees process...');
+
+            // 1. Create Backup First
+            const backupPath = await createBackup();
+
+            // 2. Run Sync
+            const updatedCount = await settlementService.syncHistoricalFees();
+
+            res.json({
+                success: true,
+                message: `تم تحديث ${updatedCount} معاملة بنجاح بعد عمل نسخة احتياطية.`,
+                backupPath,
+                updatedCount
+            });
         } catch (error) {
             next(error);
         }
