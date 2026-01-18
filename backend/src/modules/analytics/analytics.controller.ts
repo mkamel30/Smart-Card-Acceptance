@@ -3,6 +3,7 @@ import analyticsService from './analytics.service';
 
 export class AnalyticsController {
     async getSummary(req: Request, res: Response, next: NextFunction) {
+        console.log('[AnalyticsController] Running version: V3-OR-Logic');
         let filters: any = {};
         try {
             const user = (req as any).user;
