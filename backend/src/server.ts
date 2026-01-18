@@ -6,8 +6,9 @@ import { PrismaClient } from '@prisma/client';
 
 dotenv.config();
 
+import { prisma } from './config/database';
+
 const app = express();
-export const prisma = new PrismaClient();
 const port = process.env.PORT || 3000;
 
 import settlementRoutes from './modules/settlements/settlement.routes';
