@@ -180,12 +180,16 @@ export class SettlementService {
                     settlementDate: s.settlementDate,
                     transactions: [],
                     totalAmount: 0,
+                    totalFees: 0,
+                    totalNet: 0,
                     status: 'PENDING',
                     isSettled: false,
                 };
             }
             batches[batchKey].transactions.push(s);
             batches[batchKey].totalAmount += Number(s.settledAmount) || 0;
+            batches[batchKey].totalFees += Number(s.fees) || 0;
+            batches[batchKey].totalNet += Number(s.netAmount) || 0;
             // If any transaction is settled, mark batch as settled
             if (s.status === 'SETTLED') {
                 batches[batchKey].isSettled = true;

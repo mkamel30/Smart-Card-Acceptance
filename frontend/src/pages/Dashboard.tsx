@@ -141,7 +141,7 @@ export default function Dashboard() {
                     </p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-red-500">
-                    <p className="text-sm text-gray-500">إجمالي العمولات</p>
+                    <p className="text-sm text-gray-500">إجمالي الأرباح (1.15%)</p>
                     <p className="text-2xl font-bold text-red-600">
                         {Number(stats?.fees || 0).toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.م</span>
                     </p>

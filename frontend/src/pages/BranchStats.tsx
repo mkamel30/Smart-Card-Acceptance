@@ -82,11 +82,43 @@ export default function BranchStats() {
                 <p className="text-gray-500 mt-1">نظرة عامة على أداء الفرع والمعاملات الجارية</p>
             </div>
 
+            {/* Financial Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <SummaryCard
+                    title="إجمالي المبالغ"
+                    value={summary?.totalAmount || 0}
+                    icon={CreditCard}
+                    color="text-blue-600"
+                    suffix="ج.م"
+                />
+                <SummaryCard
+                    title="إجمالي الأرباح (1.15%)"
+                    value={summary?.fees || 0}
+                    icon={TrendingUp}
+                    color="text-red-600"
+                    suffix="ج.م"
+                />
+                <SummaryCard
+                    title="صافي المبالغ"
+                    value={summary?.netAmount || 0}
+                    icon={TrendingUp}
+                    color="text-emerald-600"
+                    suffix="ج.م"
+                />
+                <SummaryCard
+                    title="مبالغ تم تسويتها"
+                    value={summary?.settledAmount || 0}
+                    icon={LayoutDashboard}
+                    color="text-orange-600"
+                    suffix="ج.م"
+                />
+            </div>
+
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <SummaryCard
                     title="عدد الباتشات"
-                    value={summary?.totalBatches || 0}
+                    value={summary?.batchCount || 0}
                     icon={LayoutDashboard}
                     color="text-purple-600"
                 />
@@ -264,7 +296,7 @@ export default function BranchStats() {
     );
 }
 
-function SummaryCard({ title, value, icon: Icon, color, subtitle }: any) {
+function SummaryCard({ title, value, icon: Icon, color, subtitle, suffix }: any) {
     return (
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
@@ -275,7 +307,10 @@ function SummaryCard({ title, value, icon: Icon, color, subtitle }: any) {
             </div>
             <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-                <h3 className="text-3xl font-bold text-gray-900">{typeof value === 'number' ? value.toLocaleString() : value}</h3>
+                <div className="flex items-baseline gap-1">
+                    <h3 className="text-3xl font-bold text-gray-900">{typeof value === 'number' ? value.toLocaleString() : value}</h3>
+                    {suffix && <span className="text-sm font-medium text-gray-400">{suffix}</span>}
+                </div>
             </div>
         </div>
     );

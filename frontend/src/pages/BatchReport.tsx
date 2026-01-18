@@ -104,8 +104,20 @@ export default function BatchReport() {
                     </div>
                     <div className="text-right border-r border-gray-200 pr-8">
                         <p className="text-sm text-gray-500 mb-1">إجمالي المبلغ</p>
-                        <p className="text-2xl font-black text-blue-600">
-                            {batch.totalAmount.toLocaleString()} ج.م
+                        <p className="text-xl font-bold text-blue-600">
+                            {(batch as any).totalAmount?.toLocaleString()} ج.م
+                        </p>
+                    </div>
+                    <div className="text-right border-r border-gray-200 pr-8">
+                        <p className="text-sm text-gray-500 mb-1">الربح (1.15%)</p>
+                        <p className="text-xl font-bold text-red-600">
+                            {(batch as any).totalFees?.toLocaleString()} ج.م
+                        </p>
+                    </div>
+                    <div className="text-right border-r border-gray-200 pr-8">
+                        <p className="text-sm text-gray-500 mb-1">الصافي</p>
+                        <p className="text-xl font-black text-emerald-600">
+                            {(batch as any).totalNet?.toLocaleString()} ج.م
                         </p>
                     </div>
                     <div className="mr-auto">
@@ -131,6 +143,8 @@ export default function BatchReport() {
                             <th className="px-4 py-3">الخدمة</th>
                             <th className="px-4 py-3">رقم الموافقة</th>
                             <th className="px-4 py-3 text-left">المبلغ</th>
+                            <th className="px-4 py-3 text-left">الربح (1.15%)</th>
+                            <th className="px-4 py-3 text-left">الصافي</th>
                             <th className="px-4 py-3 rounded-tl-lg text-center print:hidden">إجراءات</th>
                         </tr>
                     </thead>
@@ -144,6 +158,12 @@ export default function BatchReport() {
                                 <td className="px-4 py-3 font-mono text-gray-500">{t.approvalNumber}</td>
                                 <td className="px-4 py-3 font-bold text-left" dir="ltr">
                                     {Number(t.settledAmount).toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3 text-red-600 text-left" dir="ltr">
+                                    {Number((t as any).fees || 0).toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3 font-black text-emerald-600 text-left" dir="ltr">
+                                    {Number((t as any).netAmount || 0).toLocaleString()}
                                 </td>
                                 <td className="px-4 py-3 text-center print:hidden flex justify-center gap-2">
                                     {getImageUrl(t) && (
