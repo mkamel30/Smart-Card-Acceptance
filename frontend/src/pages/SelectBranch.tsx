@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api/client';
 import { Building2, Plus, ShieldCheck, Loader2 } from 'lucide-react';
@@ -84,7 +85,7 @@ export default function SelectBranch() {
                 )}
 
                 <div className="space-y-3">
-                    {branches.map(branch => (
+                    {branches.map((branch: Branch) => (
                         <button
                             key={branch.id}
                             onClick={() => handleSelect(branch)}
