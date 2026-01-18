@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '@/api/client';
 import { Building2, Plus, ShieldCheck, Loader2 } from 'lucide-react';
 
@@ -9,7 +9,7 @@ interface Branch {
 }
 
 export default function SelectBranch() {
-
+    const navigate = useNavigate();
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -40,9 +40,8 @@ export default function SelectBranch() {
         localStorage.setItem('selectedBranchId', branch.id);
         localStorage.setItem('selectedBranchName', branch.name);
 
-        // Force reload to apply API interceptors or just navigate
-        // Better to reload to ensure all states are clean
-        window.location.href = '/';
+        // Navigate without full reload
+        navigate('/');
     };
 
     const handleAdminLogin = async (e: React.FormEvent) => {

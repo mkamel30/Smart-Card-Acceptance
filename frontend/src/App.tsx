@@ -17,24 +17,9 @@ const queryClient = new QueryClient();
 
 // Guard to ensure branch is selected
 function RequireBranch({ children }: { children: JSX.Element }) {
-    // Clear session on refresh (Page Reload)
-    useEffect(() => {
-        const perf = window.performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
-        if (perf && perf.type === 'reload') {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('selectedBranchId');
-            window.location.href = '/login';
-        }
-    }, []);
-
     const branchId = localStorage.getItem('selectedBranchId');
     const token = localStorage.getItem('token');
     const location = useLocation();
-
-    // If we have a token (Manager/Admin), we don't strictly need a selectedBranchId for the Dashboard
-    // But for other pages we might. For now, let's allow access if token exists OR branchId exists.
-    // Actually, Layout checks mostly. 
 
     if (!branchId && !token) {
         return <Navigate to="/select-branch" state={{ from: location }} replace />;
@@ -43,7 +28,33 @@ function RequireBranch({ children }: { children: JSX.Element }) {
     return children;
 }
 
+// Logout on Refresh Logic - Global Check
 function App() {
+    useEffect(() => {
+        // Only run this check once per full page load
+        if (sessionStorage.getItem('refresh_handled')) return;
+
+        const perf = window.performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
+        if (perf && perf.type === 'reload') {
+            const token = localStorage.getItem('token');
+            const hasBranch = !!localStorage.getItem('selectedBranchId');
+
+            if (token) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                localStorage.removeItem('selectedBranchId');
+                window.location.href = '/login';
+            } else if (hasBranch) {
+                localStorage.removeItem('selectedBranchId');
+                localStorage.removeItem('selectedBranchName');
+                window.location.href = '/select-branch';
+            }
+        }
+        sessionStorage.setItem('refresh_handled', 'true');
+
+        // Clear the flag on navigate away or just keep it for the session
+    }, []);
+
     return (
         <QueryClientProvider client={queryClient}>
             <Router>
