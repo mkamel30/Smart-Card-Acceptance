@@ -41,7 +41,10 @@ export class SettlementController {
             const isAdmin = adminPass && adminPass === process.env.ADMIN_PASSWORD;
 
             if (req.query.branchId && req.query.branchId !== 'undefined' && req.query.branchId !== 'null' && req.query.branchId !== 'all') {
-                filters.branchId = String(req.query.branchId);
+                filters.OR = [
+                    { branchId: String(req.query.branchId) },
+                    { branchId: null }
+                ];
             } else if (!isAdmin) {
                 filters.id = 'force-empty-if-no-branch';
             }

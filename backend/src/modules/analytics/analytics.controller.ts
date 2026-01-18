@@ -117,9 +117,11 @@ export class AnalyticsController {
 
             if (user?.role === 'BRANCH_MANAGER') {
                 const validBranches = requestedBranches.filter((id: string) => allowedBranches.includes(id));
-                filters.branchId = { in: validBranches.length > 0 ? validBranches : ['NO_ACCESS'] };
+                // Include null (legacy) data for the user's primary/valid branches during transition
+                filters.branchId = { in: [...validBranches, null] };
             } else {
-                filters.branchId = { in: requestedBranches };
+                // For regular branch selection (guest or admin selection), include null to keep legacy data visible
+                filters.branchId = { in: [...requestedBranches, null] };
             }
         } else if (user?.role === 'BRANCH_MANAGER') {
             filters.branchId = { in: allowedBranches.length > 0 ? allowedBranches : ['NO_ACCESS'] };
