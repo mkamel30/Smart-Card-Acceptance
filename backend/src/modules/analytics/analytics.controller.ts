@@ -56,9 +56,9 @@ export class AnalyticsController {
                 { header: 'رقم الموافقة', key: 'approval', width: 15 },
                 { header: 'أول 6 أرقام', key: 'bin', width: 12 },
                 { header: 'آخر 4 أرقام', key: 'last4', width: 12 },
-                { header: 'الإجمالي', key: 'total', width: 15 },
+                { header: 'المبلغ الأساسي', key: 'total', width: 15 },
                 { header: 'الربح (1.15%)', key: 'fees', width: 15 },
-                { header: 'الصافي', key: 'net', width: 15 },
+                { header: 'الإجمالي الشامل', key: 'net', width: 15 },
                 { header: 'الحالة', key: 'status', width: 15 },
                 { header: 'رقم المرجع', key: 'ref', width: 20 },
             ];
