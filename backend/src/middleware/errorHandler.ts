@@ -21,5 +21,8 @@ export const errorHandler = (
 
     res.status(status).json({
         message,
+        error: err.message, // Add this for debugging
+        stack: process.env.NODE_ENV === 'production' ? undefined : err.stack, // Show stack in dev
+        details: err.toString() // String representation of the error
     });
 };
