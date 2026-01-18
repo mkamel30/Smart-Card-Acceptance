@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import analyticsService from './analytics.service';
-import prisma from '../../config/database';
 
 export class AnalyticsController {
     async getSummary(req: Request, res: Response, next: NextFunction) {
