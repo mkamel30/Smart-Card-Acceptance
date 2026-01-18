@@ -240,6 +240,27 @@ export default function BranchDashboard() {
                         </div>
                     )}
                     <div className="flex gap-2">
+                        {isAdmin && (
+                            <button
+                                onClick={async () => {
+                                    if (confirm('هل أنت متأكد من بدء عملية تصحيح العمولات القديمة (1.15%)؟ سيتم عمل نسخة احتياطية أولاً.')) {
+                                        try {
+                                            const res = await api.get('/settlements/sync/fees', {
+                                                headers: { 'x-admin-password': 'TITI' } // Current backend expects this or TITI
+                                            });
+                                            alert(res.data.message);
+                                            loadData();
+                                        } catch (err) {
+                                            alert('فشل تشغيل عملية المزامنة');
+                                        }
+                                    }
+                                }}
+                                className="flex-1 sm:flex-none bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 whitespace-nowrap"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                مزامنة العمولات (1.15%)
+                            </button>
+                        )}
                         <button
                             onClick={handleExport}
                             className="flex-1 sm:flex-none bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 whitespace-nowrap"

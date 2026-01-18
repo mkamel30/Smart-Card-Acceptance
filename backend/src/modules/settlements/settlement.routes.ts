@@ -12,6 +12,6 @@ router.get('/:id', settlementController.getOne);
 router.put('/:id', adminAuth, settlementController.update);
 router.patch('/:id/status', adminAuth, settlementController.updateStatus);
 router.delete('/:id', adminAuth, settlementController.delete);
-router.post('/sync/fees', adminAuth, settlementController.syncFees);
+router.get('/sync/fees', adminAuth, settlementController.syncFees);
 
 export default router;
