@@ -8,10 +8,10 @@ router.post('/', settlementController.create);
 router.get('/', settlementController.getAll);
 router.get('/batches', settlementController.getBatches);
 router.post('/batches/:batchNumber/settle', settlementController.settleBatch);
+router.get('/sync/fees', adminAuth, settlementController.syncFees);
 router.get('/:id', settlementController.getOne);
 router.put('/:id', adminAuth, settlementController.update);
 router.patch('/:id/status', adminAuth, settlementController.updateStatus);
 router.delete('/:id', adminAuth, settlementController.delete);
-router.get('/sync/fees', adminAuth, settlementController.syncFees);
 
 export default router;

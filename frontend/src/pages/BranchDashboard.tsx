@@ -196,92 +196,99 @@ export default function BranchDashboard() {
     return (
         <div className="space-y-8 animate-in fade-in duration-700" dir="rtl">
             {/* Header & Main Filters */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/10 rounded-2xl">
-                        <LayoutDashboard className="w-8 h-8 text-primary" />
+            {/* Header Area */}
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    {/* Title & Info */}
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-primary/10 rounded-2xl hidden sm:block">
+                            <LayoutDashboard className="w-8 h-8 text-primary" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl lg:text-2xl font-black text-gray-900 leading-tight">
+                                {canSelectBranch ? 'داشبورد إدارة الفروع' : 'داشبورد الفرع'}
+                            </h1>
+                            <p className="text-sm text-gray-500 font-medium">
+                                {canSelectBranch ? 'نظرة شاملة على أداء ومبيعات كافة الفروع' : 'متابعة أداء ومبيعات الفرع الحالي'}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-xl lg:text-2xl font-black text-gray-900 leading-tight">
-                            {canSelectBranch ? 'داشبورد إدارة الفروع' : 'داشبورد الفرع'}
-                        </h1>
-                        <p className="text-sm text-gray-500 font-medium">
-                            {canSelectBranch ? 'نظرة شاملة على أداء ومبيعات كافة الفروع' : 'متابعة أداء ومبيعات الفرع الحالي'}
-                        </p>
-                    </div>
-                </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    {canSelectBranch ? (
-                        <div className="w-full sm:w-64">
-                            <Select
-                                isMulti
-                                options={branches}
-                                value={selectedBranches}
-                                onChange={(val) => setSelectedBranches(val as any)}
-                                placeholder="اختر الفروع..."
-                                className="text-sm"
-                                styles={{
-                                    control: (base) => ({
-                                        ...base,
-                                        borderRadius: '12px',
-                                        borderColor: '#e5e7eb',
-                                        padding: '2px'
-                                    })
-                                }}
-                            />
-                        </div>
-                    ) : (
-                        <div className="w-full sm:w-64 flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-600 font-bold shadow-sm">
-                            <span className="text-gray-400 text-xs">الفرع الحالي:</span>
-                            <span className="truncate">
-                                {selectedBranches[0]?.label || user?.branches?.[0]?.name || '...'}
-                            </span>
-                        </div>
-                    )}
-                    <div className="flex gap-2">
-                        {isAdmin && (
+                    {/* Quick Actions & Branch Toggle */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        {canSelectBranch ? (
+                            <div className="w-full sm:w-64">
+                                <Select
+                                    isMulti
+                                    options={branches}
+                                    value={selectedBranches}
+                                    onChange={(val) => setSelectedBranches(val as any)}
+                                    placeholder="اختر الفروع..."
+                                    className="text-sm"
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            borderRadius: '12px',
+                                            borderColor: '#e5e7eb',
+                                            padding: '2px'
+                                        })
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className="w-full sm:w-64 flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-600 font-bold shadow-sm">
+                                <span className="text-gray-400 text-xs">الفرع:</span>
+                                <span className="truncate">
+                                    {selectedBranches[0]?.label || user?.branches?.[0]?.name || '...'}
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2">
                             <button
-                                onClick={async () => {
-                                    if (confirm('هل أنت متأكد من بدء عملية تصحيح العمولات القديمة (1.15%)؟ سيتم عمل نسخة احتياطية أولاً.')) {
-                                        try {
-                                            const res = await api.get('/settlements/sync/fees', {
-                                                headers: { 'x-admin-password': 'TITI' } // Current backend expects this or TITI
-                                            });
-                                            alert(res.data.message);
-                                            loadData();
-                                        } catch (err) {
-                                            alert('فشل تشغيل عملية المزامنة');
+                                onClick={handleApplyFilters}
+                                className="flex-1 sm:flex-none bg-primary text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                                <span className="hidden sm:inline">تحديث</span>
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                className="flex-1 sm:flex-none bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition-all shadow-md shadow-green-600/20"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span className="hidden sm:inline">تصدير</span>
+                            </button>
+                            {isAdmin && (
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('بدء عملية تصحيح العمولات (1.15%)؟ سيتم عمل نسخة احتياطية للقاعدة أولاً.')) {
+                                            try {
+                                                const res = await api.get('/settlements/sync/fees', {
+                                                    params: { password: 'TITI' } // Pass it in query as we allowed in adminAuth
+                                                });
+                                                alert(res.data.message);
+                                                loadData();
+                                            } catch (err) {
+                                                alert('فشل في الوصول لرابط المزامنة. يرجى التأكد من اكتمال تحديث الخادم.');
+                                            }
                                         }
-                                    }
-                                }}
-                                className="flex-1 sm:flex-none bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 whitespace-nowrap"
+                                    }}
+                                    className="flex-1 sm:flex-none bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20"
+                                    title="مزامنة وتصحيح العمولات الصفرية"
+                                >
+                                    <RefreshCw className="w-4 h-4" />
+                                    <span className="text-xs">المزامنة (1.15%)</span>
+                                </button>
+                            )}
+                            <button
+                                onClick={handleReset}
+                                className="p-2.5 text-gray-400 hover:text-gray-600 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all"
+                                title="إعادة ضبط الفلاتر"
                             >
                                 <RefreshCw className="w-4 h-4" />
-                                مزامنة العمولات (1.15%)
                             </button>
-                        )}
-                        <button
-                            onClick={handleExport}
-                            className="flex-1 sm:flex-none bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 whitespace-nowrap"
-                        >
-                            <Download className="w-4 h-4" />
-                            تصدير Excel
-                        </button>
-                        <button
-                            onClick={handleApplyFilters}
-                            className="flex-1 sm:flex-none bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 whitespace-nowrap"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            تحديث
-                        </button>
-                        <button
-                            onClick={handleReset}
-                            className="p-2.5 text-gray-400 hover:text-gray-600 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all"
-                            title="إعادة ضبط"
-                        >
-                            <RefreshCw className="w-4 h-4" />
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
