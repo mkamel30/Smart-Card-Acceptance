@@ -133,6 +133,33 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            <div className="grid grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-blue-600">
+                    <p className="text-sm text-gray-500">إجمالي مبالغ الحركات</p>
+                    <p className="text-2xl font-bold text-blue-700">
+                        {Number(stats?.totalAmount || 0).toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.م</span>
+                    </p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-red-500">
+                    <p className="text-sm text-gray-500">إجمالي العمولات</p>
+                    <p className="text-2xl font-bold text-red-600">
+                        {Number(stats?.fees || 0).toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.م</span>
+                    </p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-emerald-500">
+                    <p className="text-sm text-gray-500">صافي المبالغ</p>
+                    <p className="text-2xl font-bold text-emerald-600">
+                        {Number(stats?.netAmount || 0).toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.م</span>
+                    </p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-orange-500">
+                    <p className="text-sm text-gray-500">مبالغ تم تسويتها</p>
+                    <p className="text-2xl font-bold text-orange-600">
+                        {Number(stats?.settledAmount || 0).toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.م</span>
+                    </p>
+                </div>
+            </div>
+
             <div className="grid grid-cols-5 gap-4">
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-purple-500">
                     <p className="text-sm text-gray-500">عدد الباتشات</p>

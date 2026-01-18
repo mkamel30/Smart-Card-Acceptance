@@ -39,7 +39,6 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 };
 
 export const optionalAuthenticate = (req: Request, _res: Response, next: NextFunction) => {
-    console.log(`[Auth] Optional Authenticate for ${req.method} ${req.path}`);
     // 1. Check for Legacy Admin Password
     const adminPassword = req.headers['x-admin-password'];
     if (adminPassword && adminPassword === process.env.ADMIN_PASSWORD) {
