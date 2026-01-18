@@ -145,9 +145,15 @@ export class SettlementService {
     }
 
     // Get settlements grouped by batch number
-    async getSettlementsByBatch(branchId?: string) {
+    async getSettlementsByBatch(branchFilter?: any) {
         const where: any = {};
-        if (branchId && branchId !== 'undefined' && branchId !== 'null') where.branchId = branchId;
+        if (branchFilter && branchFilter !== 'undefined' && branchFilter !== 'null') {
+            if (typeof branchFilter === 'object' && branchFilter.OR) {
+                where.OR = branchFilter.OR;
+            } else {
+                where.branchId = branchFilter;
+            }
+        }
 
         const settlements = await prisma.settlement.findMany({
             where,

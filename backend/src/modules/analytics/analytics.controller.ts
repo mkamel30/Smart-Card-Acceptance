@@ -132,15 +132,18 @@ export class AnalyticsController {
         if (branchInput && branchInput !== 'all' && branchInput !== 'null' && branchInput !== 'undefined') {
             const requestedBranches = Array.isArray(branchInput) ? branchInput : [branchInput];
 
-            // For now, simplify to avoid extra DB calls during debugging
-            if (user?.role === 'BRANCH_MANAGER') {
-                const validBranchIds = requestedBranches.filter((id: string) => allowedBranches.includes(id));
-                filters.branchId = { in: [...validBranchIds, null, ''] };
-            } else {
-                filters.branchId = { in: [...requestedBranches, null, ''] };
-            }
+            // Use OR condition because Prisma doesn't like mixed types in 'in' (strings and null)
+            filters.OR = [
+                { branchId: { in: requestedBranches } },
+                { branchId: null },
+                { branchId: '' }
+            ];
         } else if (user?.role === 'BRANCH_MANAGER') {
-            filters.branchId = { in: [...allowedBranches, null, ''] };
+            filters.OR = [
+                { branchId: { in: allowedBranches } },
+                { branchId: null },
+                { branchId: '' }
+            ];
         }
 
         // Handle Date Range

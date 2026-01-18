@@ -129,12 +129,14 @@ export class SettlementController {
                     select: { name: true }
                 });
 
-                // For getBatches, if it's a single branch view, we handle filtering more broadly
-                // We'll pass the list of allowed branchIds to the service if needed, but the service
-                // currently only supports a single string. Let's update the filter in the service call if possible.
-                // Or just use the Branch name as the filter if that's what's in the DB.
-
-                finalBranchId = { in: [branchIdStr, branch?.name, null, ''].filter(Boolean) };
+                finalBranchId = {
+                    OR: [
+                        { branchId: branchIdStr },
+                        { branchId: branch?.name },
+                        { branchId: null },
+                        { branchId: '' }
+                    ].filter(cond => cond.branchId !== undefined)
+                };
             }
 
             const batches = await settlementService.getSettlementsByBatch(finalBranchId);
