@@ -110,9 +110,10 @@ export class AnalyticsController {
             allowedBranches = user.allowedBranches || [];
         }
 
-        // Handle Branch Multi-select
-        if (query.branches) {
-            const requestedBranches = Array.isArray(query.branches) ? query.branches : [query.branches];
+        // Handle Branch Multi-select or Single-select
+        const branchInput = query.branches || query.branchId;
+        if (branchInput && branchInput !== 'all' && branchInput !== 'null' && branchInput !== 'undefined') {
+            const requestedBranches = Array.isArray(branchInput) ? branchInput : [branchInput];
 
             if (user?.role === 'BRANCH_MANAGER') {
                 const validBranches = requestedBranches.filter((id: string) => allowedBranches.includes(id));
@@ -134,6 +135,11 @@ export class AnalyticsController {
         // Status
         if (query.status) {
             filters.status = query.status;
+        }
+
+        // Service Category
+        if (query.serviceCategory) {
+            filters.serviceCategory = query.serviceCategory;
         }
 
         // Bank

@@ -66,19 +66,23 @@ export default function SettlementWorkFlow() {
     });
 
     const merchantCodeValue = watch('merchantCode');
+    const subServiceValue = watch('subService');
 
     // Auto-fill Merchant Name with Code if Name is empty or they are typing
     useEffect(() => {
         if (merchantCodeValue) {
-            // Optional: You could check if name is empty before overwriting, 
-            // but user request was "put the same number in the merchant name".
-            // We'll set it. If they want to change it, they can edit the name field after.
-            // But syncing continuously might prevent editing name? 
-            // Better: Set it only when code changes, and maybe allow overwrite.
-            // Actually, usually "Same number in name" implies copying value.
             setValue('merchantName', merchantCodeValue);
         }
     }, [merchantCodeValue, setValue]);
+
+    // Auto-set Category based on SubService
+    useEffect(() => {
+        if (subServiceValue?.includes('فروق') || subServiceValue?.includes('غرامات') || subServiceValue?.includes('الغرامات')) {
+            setValue('serviceCategory', 'TAMWEEN');
+        } else {
+            setValue('serviceCategory', 'SMART');
+        }
+    }, [subServiceValue, setValue]);
 
     useEffect(() => {
         fetchRecent();

@@ -3,6 +3,7 @@ import prisma from '../../config/database';
 
 export class AnalyticsService {
     async getDashboardSummary(filters: any) {
+        // 1. Basic Aggregations (Sums)
         const stats = await prisma.settlement.aggregate({
             where: filters,
             _sum: {
@@ -16,6 +17,16 @@ export class AnalyticsService {
             }
         });
 
+        // 2. Counts for Categories (SMART/TAMWEEN)
+        const categoryCounts = await prisma.settlement.groupBy({
+            where: filters,
+            by: ['serviceCategory'],
+            _count: {
+                id: true
+            }
+        });
+
+        // 3. Status Breakdown (for Pending etc)
         const statusCounts = await prisma.settlement.groupBy({
             where: filters,
             by: ['status'],
@@ -24,12 +35,30 @@ export class AnalyticsService {
             }
         });
 
+        // 4. Unique Batch Count
+        // Prisma doesn't support countDistinct in aggregate for all providers easily, 
+        // so we use groupBy or a separate count if needed.
+        const batchCountGroup = await prisma.settlement.groupBy({
+            where: {
+                ...filters,
+                AND: [
+                    { batchNumber: { not: null } },
+                    { batchNumber: { not: '' } }
+                ]
+            },
+            by: ['batchNumber'],
+        });
+
         return {
             totalAmount: Number(stats._sum.totalAmount) || 0,
             settledAmount: Number(stats._sum.settledAmount) || 0,
             fees: Number(stats._sum.fees) || 0,
             netAmount: Number(stats._sum.netAmount) || 0,
             totalCount: stats._count.id,
+            batchCount: batchCountGroup.length,
+            smartCount: categoryCounts.find(c => c.serviceCategory === 'SMART')?._count.id || 0,
+            tamweenCount: categoryCounts.find(c => c.serviceCategory === 'TAMWEEN')?._count.id || 0,
+            pendingCount: statusCounts.find(s => s.status === 'PENDING')?._count.id || 0,
             statusBreakdown: statusCounts.map(s => ({
                 status: s.status,
                 count: s._count.id

@@ -32,8 +32,9 @@ export class SettlementController {
     async getAll(req: Request, res: Response, next: NextFunction) {
         let filters: any = {};
         try {
-            const { status, bankName, page, limit } = req.query;
+            const { status, bankName, serviceCategory, page, limit } = req.query;
             if (status) filters.status = status;
+            if (serviceCategory) filters.serviceCategory = serviceCategory;
             if (bankName) filters.bankName = { contains: String(bankName), mode: 'insensitive' };
 
             const adminPass = req.headers['x-admin-password'];

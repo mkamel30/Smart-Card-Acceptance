@@ -12,7 +12,8 @@ export default function Dashboard() {
     const [settlements, setSettlements] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
-    const [filters] = useState({ category: '' });
+    const [stats, setStats] = useState<any>(null);
+    const [filters, setFilters] = useState({ category: '' });
     const { isAdmin } = useAdmin();
     const [editingSettlement, setEditingSettlement] = useState<any>(null);
 
@@ -31,12 +32,24 @@ export default function Dashboard() {
     const fetchSettlements = async () => {
         setLoading(true);
         try {
-            const params: any = {};
-            if (filters.category) params.status = filters.category;
-            const res = await api.get('/settlements', { params });
-            setSettlements(res.data.data);
+            const branchId = localStorage.getItem('selectedBranchId');
+            const params: any = { branchId };
+
+            if (filters.category === 'SMART') {
+                params.serviceCategory = 'SMART';
+            } else if (filters.category === 'TAMWEEN') {
+                params.serviceCategory = 'TAMWEEN';
+            }
+
+            const [settleRes, statsRes] = await Promise.all([
+                api.get('/settlements', { params }),
+                api.get('/analytics/summary', { params })
+            ]);
+
+            setSettlements(settleRes.data.data);
+            setStats(statsRes.data);
         } catch (error) {
-            console.error('Failed to fetch settlements:', error);
+            console.error('Failed to fetch dashboard data:', error);
         } finally {
             setLoading(false);
         }
@@ -124,36 +137,30 @@ export default function Dashboard() {
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-purple-500">
                     <p className="text-sm text-gray-500">عدد الباتشات</p>
                     <p className="text-2xl font-bold text-purple-600">
-                        {new Set(settlements.map(s => s.batchNumber).filter(b => b)).size}
+                        {stats?.batchCount || 0}
                     </p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                     <p className="text-sm text-gray-500">إجمالي المعاملات</p>
-                    <p className="text-2xl font-bold">{settlements.length}</p>
+                    <p className="text-2xl font-bold">{stats?.totalCount || 0}</p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-blue-500">
                     <p className="text-sm text-gray-500">شركة سمارت</p>
                     <p className="text-2xl font-bold text-blue-600">
-                        {settlements.filter(s =>
-                            !s.subService?.includes('فروق') &&
-                            !s.subService?.includes('غرامات') &&
-                            !s.subService?.includes('الغرامات')
-                        ).length}
+                        {stats?.smartCount || 0}
                     </p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-green-500">
                     <p className="text-sm text-gray-500">وزارة التموين</p>
                     <p className="text-2xl font-bold text-green-600">
-                        {settlements.filter(s =>
-                            s.subService?.includes('فروق') ||
-                            s.subService?.includes('غرامات') ||
-                            s.subService?.includes('الغرامات')
-                        ).length}
+                        {stats?.tamweenCount || 0}
                     </p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-yellow-500">
                     <p className="text-sm text-gray-500">بانتظار الموافقة</p>
-                    <p className="text-2xl font-bold text-yellow-600">{settlements.filter(s => s.status === 'PENDING').length}</p>
+                    <p className="text-2xl font-bold text-yellow-600">
+                        {stats?.pendingCount || 0}
+                    </p>
                 </div>
             </div>
 
@@ -162,10 +169,14 @@ export default function Dashboard() {
                     <span className="font-bold text-gray-700">قائمة الحركات الأخيرة</span>
                     <div className="flex gap-2 items-center">
                         <Filter className="w-4 h-4 text-gray-400" />
-                        <select className="text-xs border-none bg-transparent focus:ring-0">
-                            <option>الكل</option>
-                            <option>شركة سمارت</option>
-                            <option>وزارة التموين</option>
+                        <select
+                            value={filters.category}
+                            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                            className="text-xs border-none bg-transparent focus:ring-0 cursor-pointer text-primary font-bold"
+                        >
+                            <option value="">الكل</option>
+                            <option value="SMART">شركة سمارت</option>
+                            <option value="TAMWEEN">وزارة التموين</option>
                         </select>
                     </div>
                 </div>
