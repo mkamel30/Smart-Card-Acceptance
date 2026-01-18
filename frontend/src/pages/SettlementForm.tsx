@@ -92,7 +92,7 @@ export default function SettlementWorkFlow() {
         if (settledAmountValue > 0) {
             const calculatedFees = Math.round(settledAmountValue * 0.0115 * 100) / 100;
             setValue('fees', calculatedFees);
-            setValue('netAmount', settledAmountValue - calculatedFees);
+            setValue('netAmount', settledAmountValue + calculatedFees);
         } else {
             setValue('fees', 0);
             setValue('netAmount', 0);
@@ -343,8 +343,8 @@ export default function SettlementWorkFlow() {
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">ج.م</span>
                                     </div>
                                     <div className="flex justify-between mt-1 px-1">
-                                        <span className="text-[10px] text-gray-400">العمولة (1.15%): <b className="text-red-400">{feesValue.toLocaleString()} ج.م</b></span>
-                                        <span className="text-[10px] text-gray-400">الصافي المتوقع: <b className="text-emerald-500">{(settledAmountValue - feesValue || 0).toLocaleString()} ج.م</b></span>
+                                        <span className="text-[10px] text-gray-400">الربح (1.15%): <b className="text-red-400">{feesValue.toLocaleString()} ج.م</b></span>
+                                        <span className="text-[10px] text-gray-400">الإجمالي (شامل الربح): <b className="text-emerald-500">{(Number(settledAmountValue) + Number(feesValue) || 0).toLocaleString()} ج.م</b></span>
                                     </div>
                                     {errors.settledAmount && <p className="error-text">{errors.settledAmount.message}</p>}
                                 </div>

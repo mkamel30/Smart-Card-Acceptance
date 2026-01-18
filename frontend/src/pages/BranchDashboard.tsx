@@ -353,30 +353,23 @@ export default function BranchDashboard() {
             {/* KPIs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <MetricCard
-                    title="إجمالي المبيعات"
-                    value={`${(summary?.totalAmount || 0).toLocaleString()} ج.م`}
-                    subtitle="مجموع كافة العمليات"
+                    title="مبالغ العمليات"
+                    value={`${(summary?.settledAmount || 0).toLocaleString()} ج.م`}
+                    subtitle="المبالغ المسددة الأساسية"
                     icon={Briefcase}
                     color="text-primary"
                 />
                 <MetricCard
-                    title="المبالغ المسددة"
-                    value={`${(summary?.settledAmount || 0).toLocaleString()} ج.م`}
-                    subtitle="المبالغ التي تم تحصيلها"
-                    icon={TrendingUp}
-                    color="text-orange-600"
-                />
-                <MetricCard
-                    title="الأرباح (1.15%)"
+                    title="الربح (1.15%)"
                     value={`${(summary?.fees || 0).toLocaleString()} ج.م`}
-                    subtitle="إجمالي الربح المحسوب"
+                    subtitle="إجمالي الربح المضاف"
                     icon={TrendingUp}
                     color="text-red-600"
                 />
                 <MetricCard
-                    title="صافي المبالغ"
+                    title="الإجمالي الشامل"
                     value={`${(summary?.netAmount || 0).toLocaleString()} ج.م`}
-                    subtitle="بعد خصم الربح"
+                    subtitle="المبلغ الأساسي + الربح"
                     icon={ArrowUpRight}
                     color="text-emerald-600"
                 />

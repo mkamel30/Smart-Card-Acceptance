@@ -85,21 +85,21 @@ export default function BranchStats() {
             {/* Financial Summary */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <SummaryCard
-                    title="إجمالي المبالغ"
-                    value={summary?.totalAmount || 0}
+                    title="مبالغ العمليات (أساسي)"
+                    value={summary?.settledAmount || 0}
                     icon={CreditCard}
                     color="text-blue-600"
                     suffix="ج.م"
                 />
                 <SummaryCard
-                    title="إجمالي الأرباح (1.15%)"
+                    title="إجمالي الربح (1.15%+)"
                     value={summary?.fees || 0}
                     icon={TrendingUp}
                     color="text-red-600"
                     suffix="ج.م"
                 />
                 <SummaryCard
-                    title="صافي المبالغ"
+                    title="الإجمالي الشامل"
                     value={summary?.netAmount || 0}
                     icon={TrendingUp}
                     color="text-emerald-600"

@@ -36,7 +36,7 @@ export class SettlementService {
         // Auto-calculate fees and net amount if not provided or to ensure accuracy
         const settledAmount = Number(data.settledAmount);
         const fees = data.fees !== undefined && data.fees > 0 ? Number(data.fees) : Math.round(settledAmount * FEE_RATE * 100) / 100;
-        const netAmount = settledAmount - fees;
+        const netAmount = settledAmount + fees;
 
         return (await prisma.settlement.create({
             data: {
@@ -126,7 +126,7 @@ export class SettlementService {
             fees = Math.round(settledAmount * FEE_RATE * 100) / 100;
         }
 
-        const netAmount = settledAmount - fees;
+        const netAmount = settledAmount + fees;
 
         return (await prisma.settlement.update({
             where: { id },
@@ -240,7 +240,7 @@ export class SettlementService {
             if (settledAmt === 0) continue;
 
             const fees = Math.round(settledAmt * FEE_RATE * 100) / 100;
-            const netAmount = settledAmt - fees;
+            const netAmount = settledAmt + fees;
 
             await prisma.settlement.update({
                 where: { id: s.id },
