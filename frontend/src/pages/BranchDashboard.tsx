@@ -323,7 +323,7 @@ export default function BranchDashboard() {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <MetricCard
                     title="إجمالي المبيعات"
                     value={`${(summary?.totalAmount || 0).toLocaleString()} ج.م`}
@@ -336,14 +336,21 @@ export default function BranchDashboard() {
                     value={`${(summary?.settledAmount || 0).toLocaleString()} ج.م`}
                     subtitle="المبالغ التي تم تحصيلها"
                     icon={TrendingUp}
-                    color="text-green-600"
+                    color="text-orange-600"
                 />
                 <MetricCard
-                    title="صافي الأرباح"
+                    title="الأرباح (1.15%)"
+                    value={`${(summary?.fees || 0).toLocaleString()} ج.م`}
+                    subtitle="إجمالي الربح المحسوب"
+                    icon={TrendingUp}
+                    color="text-red-600"
+                />
+                <MetricCard
+                    title="صافي المبالغ"
                     value={`${(summary?.netAmount || 0).toLocaleString()} ج.م`}
-                    subtitle="بعد خصم الرسوم والمصاريف"
+                    subtitle="بعد خصم الربح"
                     icon={ArrowUpRight}
-                    color="text-blue-600"
+                    color="text-emerald-600"
                 />
                 <MetricCard
                     title="عدد العمليات"
@@ -553,6 +560,8 @@ export default function BranchDashboard() {
                                 <th className="text-right p-4 text-xs font-bold text-gray-500">الفرع</th>
                                 <th className="text-right p-4 text-xs font-bold text-gray-500">البنك</th>
                                 <th className="text-right p-4 text-xs font-bold text-gray-500">المبلغ</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500">الربح</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500">الصافي</th>
                                 <th className="text-right p-4 text-xs font-bold text-gray-500">الحالة</th>
                                 <th className="text-center p-4 text-xs font-bold text-gray-500 w-24">صورة</th>
                             </tr>
@@ -566,7 +575,13 @@ export default function BranchDashboard() {
                                     <td className="p-4 text-sm text-gray-600">{tx.branch?.name}</td>
                                     <td className="p-4 text-sm text-gray-600 font-medium">{tx.bankName}</td>
                                     <td className="p-4 text-sm font-bold text-gray-900">
-                                        {Number(tx.totalAmount).toLocaleString()} ج.m
+                                        {Number(tx.totalAmount).toLocaleString()}
+                                    </td>
+                                    <td className="p-4 text-sm text-red-600 font-bold">
+                                        {Number(tx.fees || 0).toLocaleString()}
+                                    </td>
+                                    <td className="p-4 text-sm text-emerald-600 font-black">
+                                        {Number(tx.netAmount || 0).toLocaleString()}
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${tx.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
