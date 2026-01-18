@@ -222,15 +222,8 @@ export class SettlementService {
 
     // Sync historical data: recalculate fees for entries where fees are 0
     async syncHistoricalFees() {
-        console.log('[SettlementService] Syncing historical fees...');
-        const settlements = await prisma.settlement.findMany({
-            where: {
-                OR: [
-                    { fees: 0 },
-                    { fees: { equals: 0 as any } }
-                ]
-            }
-        });
+        console.log('[SettlementService] Syncing and correcting all fees...');
+        const settlements = await prisma.settlement.findMany();
 
         console.log(`[SettlementService] Found ${settlements.length} settlements to update.`);
 
