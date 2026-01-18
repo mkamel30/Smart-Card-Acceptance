@@ -41,9 +41,18 @@ export class SettlementController {
             const isAdmin = adminPass && adminPass === process.env.ADMIN_PASSWORD;
 
             if (req.query.branchId && req.query.branchId !== 'undefined' && req.query.branchId !== 'null' && req.query.branchId !== 'all') {
+                const branchIdStr = String(req.query.branchId);
+                const { prisma } = require('../../server');
+                const branch = await prisma.branch.findUnique({
+                    where: { id: branchIdStr },
+                    select: { name: true }
+                });
+
                 filters.OR = [
-                    { branchId: String(req.query.branchId) },
-                    { branchId: null }
+                    { branchId: branchIdStr },
+                    { branchId: branch?.name || 'NOT_FOUND_LEGACY' },
+                    { branchId: null },
+                    { branchId: '' }
                 ];
             } else if (!isAdmin) {
                 filters.id = 'force-empty-if-no-branch';
@@ -111,8 +120,25 @@ export class SettlementController {
 
     async getBatches(req: Request, res: Response, next: NextFunction) {
         try {
-            const branchId = req.query.branchId ? String(req.query.branchId) : undefined;
-            const batches = await settlementService.getSettlementsByBatch(branchId);
+            const branchIdStr = req.query.branchId ? String(req.query.branchId) : undefined;
+            let finalBranchId: any = branchIdStr;
+
+            if (branchIdStr && branchIdStr !== 'undefined' && branchIdStr !== 'null' && branchIdStr !== 'all') {
+                const { prisma } = require('../../server');
+                const branch = await prisma.branch.findUnique({
+                    where: { id: branchIdStr },
+                    select: { name: true }
+                });
+
+                // For getBatches, if it's a single branch view, we handle filtering more broadly
+                // We'll pass the list of allowed branchIds to the service if needed, but the service
+                // currently only supports a single string. Let's update the filter in the service call if possible.
+                // Or just use the Branch name as the filter if that's what's in the DB.
+
+                finalBranchId = { in: [branchIdStr, branch?.name, null, ''].filter(Boolean) };
+            }
+
+            const batches = await settlementService.getSettlementsByBatch(finalBranchId);
             res.json(batches);
         } catch (error) {
             next(error);

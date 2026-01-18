@@ -6,7 +6,7 @@ export class AnalyticsController {
     async getSummary(req: Request, res: Response, next: NextFunction) {
         try {
             const user = (req as any).user;
-            const filters = this.parseFilters(req.query, user);
+            const filters = await this.parseFilters(req.query, user);
             const summary = await analyticsService.getDashboardSummary(filters);
             res.json(summary);
         } catch (error) {
@@ -17,7 +17,7 @@ export class AnalyticsController {
     async getCharts(req: Request, res: Response, next: NextFunction) {
         try {
             const user = (req as any).user;
-            const filters = this.parseFilters(req.query, user);
+            const filters = await this.parseFilters(req.query, user);
             const charts = await analyticsService.getChartsData(filters);
             res.json(charts);
         } catch (error) {
@@ -28,7 +28,7 @@ export class AnalyticsController {
     async exportSettlements(req: Request, res: Response, next: NextFunction) {
         try {
             const user = (req as any).user;
-            const filters = this.parseFilters(req.query, user);
+            const filters = await this.parseFilters(req.query, user);
             const data = await analyticsService.getExportData(filters);
 
             const ExcelJS = require('exceljs');
@@ -94,7 +94,7 @@ export class AnalyticsController {
             const user = (req as any).user;
             const page = Number(req.query.page) || 1;
             const limit = Number(req.query.limit) || 10;
-            const filters = this.parseFilters(req.query, user);
+            const filters = await this.parseFilters(req.query, user);
             const result = await analyticsService.getPaginatedTransactions(page, limit, filters);
             res.json(result);
         } catch (error) {
@@ -102,8 +102,9 @@ export class AnalyticsController {
         }
     }
 
-    private parseFilters(query: any, user?: any) {
+    private async parseFilters(query: any, user?: any) {
         const filters: any = {};
+        const { prisma } = require('../../server');
 
         let allowedBranches: string[] = [];
         if (user && user.role === 'BRANCH_MANAGER') {
@@ -115,16 +116,27 @@ export class AnalyticsController {
         if (branchInput && branchInput !== 'all' && branchInput !== 'null' && branchInput !== 'undefined') {
             const requestedBranches = Array.isArray(branchInput) ? branchInput : [branchInput];
 
+            // Resolve Branch Names for Legacy Support
+            const branches = await prisma.branch.findMany({
+                where: { id: { in: requestedBranches } },
+                select: { id: true, name: true }
+            });
+            const branchNames = branches.map((b: any) => b.name);
+
             if (user?.role === 'BRANCH_MANAGER') {
-                const validBranches = requestedBranches.filter((id: string) => allowedBranches.includes(id));
-                // Include null (legacy) data for the user's primary/valid branches during transition
-                filters.branchId = { in: [...validBranches, null] };
+                const validBranchIds = requestedBranches.filter((id: string) => allowedBranches.includes(id));
+                const validBranchNames = branches.filter((b: any) => allowedBranches.includes(b.id)).map((b: any) => b.name);
+                filters.branchId = { in: [...validBranchIds, ...validBranchNames, null, ''] };
             } else {
-                // For regular branch selection (guest or admin selection), include null to keep legacy data visible
-                filters.branchId = { in: [...requestedBranches, null] };
+                filters.branchId = { in: [...requestedBranches, ...branchNames, null, ''] };
             }
         } else if (user?.role === 'BRANCH_MANAGER') {
-            filters.branchId = { in: allowedBranches.length > 0 ? allowedBranches : ['NO_ACCESS'] };
+            const branches = await prisma.branch.findMany({
+                where: { id: { in: allowedBranches } },
+                select: { name: true }
+            });
+            const branchNames = branches.map((b: any) => b.name);
+            filters.branchId = { in: [...allowedBranches, ...branchNames, null, ''] };
         }
 
         // Handle Date Range
