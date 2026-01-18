@@ -4,23 +4,35 @@ import prisma from '../../config/database';
 
 export class AnalyticsController {
     async getSummary(req: Request, res: Response, next: NextFunction) {
+        let filters: any = {};
         try {
             const user = (req as any).user;
-            const filters = await this.parseFilters(req.query, user);
+            filters = await this.parseFilters(req.query, user);
             const summary = await analyticsService.getDashboardSummary(filters);
             res.json(summary);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('[AnalyticsController.getSummary] Error:', {
+                message: error.message,
+                stack: error.stack,
+                filters
+            });
             next(error);
         }
     }
 
     async getCharts(req: Request, res: Response, next: NextFunction) {
+        let filters: any = {};
         try {
             const user = (req as any).user;
-            const filters = await this.parseFilters(req.query, user);
+            filters = await this.parseFilters(req.query, user);
             const charts = await analyticsService.getChartsData(filters);
             res.json(charts);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('[AnalyticsController.getCharts] Error:', {
+                message: error.message,
+                stack: error.stack,
+                filters
+            });
             next(error);
         }
     }
@@ -90,14 +102,20 @@ export class AnalyticsController {
     }
 
     async getTransactions(req: Request, res: Response, next: NextFunction) {
+        let filters: any = {};
         try {
             const user = (req as any).user;
             const page = Number(req.query.page) || 1;
             const limit = Number(req.query.limit) || 10;
-            const filters = await this.parseFilters(req.query, user);
+            filters = await this.parseFilters(req.query, user);
             const result = await analyticsService.getPaginatedTransactions(page, limit, filters);
             res.json(result);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('[AnalyticsController.getTransactions] Error:', {
+                message: error.message,
+                stack: error.stack,
+                filters
+            });
             next(error);
         }
     }
@@ -115,27 +133,15 @@ export class AnalyticsController {
         if (branchInput && branchInput !== 'all' && branchInput !== 'null' && branchInput !== 'undefined') {
             const requestedBranches = Array.isArray(branchInput) ? branchInput : [branchInput];
 
-            // Resolve Branch Names for Legacy Support
-            const branches = await prisma.branch.findMany({
-                where: { id: { in: requestedBranches } },
-                select: { id: true, name: true }
-            });
-            const branchNames = branches.map((b: any) => b.name);
-
+            // For now, simplify to avoid extra DB calls during debugging
             if (user?.role === 'BRANCH_MANAGER') {
                 const validBranchIds = requestedBranches.filter((id: string) => allowedBranches.includes(id));
-                const validBranchNames = branches.filter((b: any) => allowedBranches.includes(b.id)).map((b: any) => b.name);
-                filters.branchId = { in: [...validBranchIds, ...validBranchNames, null, ''] };
+                filters.branchId = { in: [...validBranchIds, null, ''] };
             } else {
-                filters.branchId = { in: [...requestedBranches, ...branchNames, null, ''] };
+                filters.branchId = { in: [...requestedBranches, null, ''] };
             }
         } else if (user?.role === 'BRANCH_MANAGER') {
-            const branches = await prisma.branch.findMany({
-                where: { id: { in: allowedBranches } },
-                select: { name: true }
-            });
-            const branchNames = branches.map((b: any) => b.name);
-            filters.branchId = { in: [...allowedBranches, ...branchNames, null, ''] };
+            filters.branchId = { in: [...allowedBranches, null, ''] };
         }
 
         // Handle Date Range
