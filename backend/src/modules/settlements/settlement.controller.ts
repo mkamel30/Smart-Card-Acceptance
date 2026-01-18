@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import settlementService from './settlement.service';
 import { CreateSettlementSchema, UpdateSettlementSchema, SettlementStatusSchema } from './settlement.dto';
+import prisma from '../../config/database';
 
 export class SettlementController {
     async create(req: Request, res: Response, next: NextFunction) {
@@ -42,7 +43,6 @@ export class SettlementController {
 
             if (req.query.branchId && req.query.branchId !== 'undefined' && req.query.branchId !== 'null' && req.query.branchId !== 'all') {
                 const branchIdStr = String(req.query.branchId);
-                const { prisma } = require('../../server');
                 const branch = await prisma.branch.findUnique({
                     where: { id: branchIdStr },
                     select: { name: true }
@@ -124,7 +124,6 @@ export class SettlementController {
             let finalBranchId: any = branchIdStr;
 
             if (branchIdStr && branchIdStr !== 'undefined' && branchIdStr !== 'null' && branchIdStr !== 'all') {
-                const { prisma } = require('../../server');
                 const branch = await prisma.branch.findUnique({
                     where: { id: branchIdStr },
                     select: { name: true }

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import exportService from './export.service';
+import prisma from '../../config/database';
 
 export class ExportController {
     async downloadExcel(req: Request, res: Response, next: NextFunction) {
@@ -10,7 +11,6 @@ export class ExportController {
             if (bankName) filters.bankName = { contains: String(bankName), mode: 'insensitive' };
             if (req.query.branchId && req.query.branchId !== 'undefined' && req.query.branchId !== 'null') {
                 const branchIdStr = String(req.query.branchId);
-                const { prisma } = require('../../server');
                 const branch = await prisma.branch.findUnique({
                     where: { id: branchIdStr },
                     select: { name: true }
@@ -55,7 +55,6 @@ export class ExportController {
             const branchIdStr = req.query.branchId ? String(req.query.branchId) : undefined;
             let finalBranchId: any = branchIdStr;
             if (branchIdStr && branchIdStr !== 'undefined' && branchIdStr !== 'null') {
-                const { prisma } = require('../../server');
                 const branch = await prisma.branch.findUnique({
                     where: { id: branchIdStr },
                     select: { name: true }
