@@ -177,18 +177,39 @@ export default function BranchDashboard() {
         );
     };
 
-    const MetricCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between group hover:shadow-md transition-all">
-            <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-500">{title}</p>
-                <p className={`text-2xl font-black ${color}`}>{value}</p>
-                <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
+    const MetricCard = ({ title, value, subtitle, icon: Icon, color, trendColor }: any) => (
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col items-start gap-4 group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            {/* Background Decoration */}
+            <div className={`absolute top-0 left-0 w-2 h-full ${trendColor}`} />
+
+            <div className="flex items-center justify-between w-full">
+                <div className={`p-4 rounded-2xl ${trendColor.replace('bg-', 'bg-opacity-10 ')} group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className={`w-6 h-6 ${color}`} />
+                </div>
+                {isAdmin && (
+                    <div className="flex -space-x-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    </div>
+                )}
+            </div>
+
+            <div className="space-y-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</p>
+                <div className="flex items-baseline gap-1">
+                    <h3 className="text-2xl font-black text-gray-900 leading-tight">{value}</h3>
+                    {typeof value === 'string' && value.includes('ج.م') && (
+                        <span className="text-xs font-bold text-gray-400">ج.م</span>
+                    )}
+                </div>
+                <p className="text-[11px] font-bold text-gray-400 flex items-center gap-1 mt-1">
                     <TrendingUp className="w-3 h-3 text-green-500" />
                     {subtitle}
                 </p>
             </div>
-            <div className={`p-3 rounded-xl bg-gray-50 group-hover:bg-opacity-80 transition-colors`}>
-                <Icon className={`w-6 h-6 ${color.replace('text-', 'text-opacity-70 ')}`} />
+
+            {/* Subtle Chart Replacement / Progress Bar */}
+            <div className="w-full h-1 bg-gray-50 rounded-full overflow-hidden mt-2">
+                <div className={`h-full ${trendColor} w-2/3 opacity-30 group-hover:opacity-100 transition-all duration-500`} />
             </div>
         </div>
     );
@@ -199,18 +220,27 @@ export default function BranchDashboard() {
             {/* Header Area */}
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    {/* Title & Info */}
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-primary/10 rounded-2xl hidden sm:block">
-                            <LayoutDashboard className="w-8 h-8 text-primary" />
+                    {/* Title & Brand Section */}
+                    <div className="flex items-center gap-6">
+                        <div className="relative">
+                            <div className="p-4 bg-gradient-to-br from-primary to-indigo-600 rounded-[2rem] shadow-lg shadow-primary/30 relative z-10">
+                                <LayoutDashboard className="w-8 h-8 text-white" />
+                            </div>
+                            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full scale-125 translate-y-2" />
                         </div>
                         <div>
-                            <h1 className="text-xl lg:text-2xl font-black text-gray-900 leading-tight">
-                                {canSelectBranch ? 'داشبورد إدارة الفروع' : 'داشبورد الفرع'}
+                            <h1 className="text-2xl lg:text-3xl font-black text-gray-900 tracking-tight mb-1">
+                                {canSelectBranch ? 'لوحة تحكم إدارة الفروع' : 'لوحة تحكم الفرع'}
                             </h1>
-                            <p className="text-sm text-gray-500 font-medium">
-                                {canSelectBranch ? 'نظرة شاملة على أداء ومبيعات كافة الفروع' : 'متابعة أداء ومبيعات الفرع الحالي'}
-                            </p>
+                            <div className="flex items-center gap-2">
+                                <span className="flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 text-[10px] font-black rounded-full">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    مباشر الآن
+                                </span>
+                                <p className="text-sm text-gray-400 font-bold">
+                                    {canSelectBranch ? 'إدارة وتحليل بيانات النظام بالكامل' : 'متابعة أداء فرعك الحالي'}
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -351,34 +381,38 @@ export default function BranchDashboard() {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard
                     title="مبالغ العمليات"
-                    value={`${(summary?.settledAmount || 0).toLocaleString()} ج.م`}
-                    subtitle="المبالغ المسددة الأساسية"
+                    value={`${(summary?.settledAmount || 0).toLocaleString()}`}
+                    subtitle="إجمالي المبالغ المسددة الأساسية"
                     icon={Briefcase}
                     color="text-primary"
+                    trendColor="bg-primary"
                 />
                 <MetricCard
                     title="الربح (1.15%)"
-                    value={`${(summary?.fees || 0).toLocaleString()} ج.م`}
-                    subtitle="إجمالي الربح المضاف"
+                    value={`${(summary?.fees || 0).toLocaleString()}`}
+                    subtitle="إجمالي الربح المضاف للإجمالي"
                     icon={TrendingUp}
-                    color="text-red-600"
+                    color="text-red-500"
+                    trendColor="bg-red-500"
                 />
                 <MetricCard
                     title="الإجمالي الشامل"
-                    value={`${(summary?.netAmount || 0).toLocaleString()} ج.م`}
-                    subtitle="المبلغ الأساسي + الربح"
+                    value={`${(summary?.netAmount || 0).toLocaleString()}`}
+                    subtitle="المبلغ الأساسي + الأرباح"
                     icon={ArrowUpRight}
                     color="text-emerald-600"
+                    trendColor="bg-emerald-500"
                 />
                 <MetricCard
                     title="عدد العمليات"
                     value={summary?.totalCount || 0}
-                    subtitle="إجمالي عدد الإيصالات"
+                    subtitle="إجمالي عدد الإيصالات حالياً"
                     icon={CreditCard}
                     color="text-purple-600"
+                    trendColor="bg-purple-600"
                 />
             </div>
 
