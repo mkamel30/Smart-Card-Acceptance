@@ -87,9 +87,14 @@ export class OCRController {
                     processingTime: Date.now()
                 }
             });
-        } catch (error) {
-            console.error('OCR processing error:', error);
-            next(error);
+        } catch (error: any) {
+            console.error('OCR Controller FATAL Error:', error);
+            res.status(500).json({
+                error: 'Internal server error during OCR processing',
+                message: error.message,
+                code: 'OCR_CRASH',
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            });
         }
     }
 

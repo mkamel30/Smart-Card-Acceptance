@@ -59,33 +59,38 @@ export class OCRService {
         let storageBuffer = file.buffer;
 
         try {
+            console.log('OCR Step 1: Starting image processing with Sharp...');
             const image = sharp(file.buffer);
             const metadata = await image.metadata();
+            console.log(`OCR Metadata: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
 
-            console.log(`Processing image for OCR: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
-
-            // 1. Prepare Buffer for OCR (High Quality PNG, Grayscale, Normalized)
+            // 1. Prepare Buffer for OCR (Grayscale, Normalized)
+            console.log('OCR Step 2: Preparing OCR buffer...');
             ocrBuffer = await image
-                .rotate() // Auto-rotate based on EXIF
-                .resize({ width: 1500, withoutEnlargement: true })
+                .rotate()
+                .resize({ width: 1200, withoutEnlargement: true })
                 .grayscale()
                 .normalize()
                 .toFormat('png')
                 .toBuffer();
+            console.log('OCR Step 2: OCR buffer ready.');
 
-            // 2. Prepare Buffer for Storage (Compressed WebP)
+            // 2. Prepare Buffer for Storage (WebP)
+            console.log('OCR Step 3: Preparing storage buffer...');
             storageBuffer = await sharp(file.buffer)
                 .rotate()
-                .resize({ width: 1000, withoutEnlargement: true })
-                .webp({ quality: 75 })
+                .resize({ width: 800, withoutEnlargement: true })
+                .webp({ quality: 70 })
                 .toBuffer();
-        } catch (e) {
-            console.warn('Image optimization failed, using original file', e);
+            console.log('OCR Step 3: Storage buffer ready.');
+        } catch (e: any) {
+            console.warn('OCR Warning: Image optimization failed, using original:', e.message);
         }
 
         // 1. Upload to Supabase Storage
         let publicUrl = '';
         try {
+            console.log('OCR Step 4: Uploading to Supabase...');
             const fileName = `receipts/${Date.now()}_s.webp`;
             const { error } = await supabase.storage
                 .from('receipts')
@@ -97,68 +102,72 @@ export class OCRService {
             if (!error) {
                 const urlData = supabase.storage.from('receipts').getPublicUrl(fileName);
                 publicUrl = urlData.data.publicUrl;
+                console.log('OCR Step 4 Success:', publicUrl);
             } else {
-                console.error('Supabase Upload Error:', error);
+                console.error('OCR Step 4 Error (Supabase):', error);
             }
-        } catch (err) {
-            console.error('Upload Failed', err);
+        } catch (err: any) {
+            console.error('OCR Step 4 FATAL:', err.message);
         }
 
-        // 2. Perform OCR with improved engine selection
+        // 2. Perform OCR
         let text = '';
         let usedEngine = 'unknown';
 
-        // --- Step A: Try OCR.space (Primary Engine) ---
+        // --- Step A: Try OCR.space ---
         const OCR_SPACE_KEY = process.env.OCR_SPACE_API_KEY || "K82676068988957";
 
         if (OCR_SPACE_KEY && publicUrl) {
             try {
-                console.log('Attempting OCR.space...');
+                console.log('OCR Step 5: Calling OCR.space...');
                 const osFormData = new FormData();
                 osFormData.append('url', publicUrl);
-                osFormData.append('language', 'eng+ara'); // Support both Arabic and English
-                osFormData.append('isOverlayRequired', 'false');
+                osFormData.append('language', 'eng+ara');
                 osFormData.append('OCREngine', '2');
-                osFormData.append('detectOrientation', 'true');
                 osFormData.append('scale', 'true');
 
                 const osResponse = await axios.post('https://api.ocr.space/parse/image', osFormData, {
                     headers: { ...osFormData.getHeaders(), 'apikey': OCR_SPACE_KEY },
-                    timeout: 15000
+                    timeout: 20000
                 });
 
                 if (osResponse.data?.ParsedResults?.[0]?.ParsedText) {
                     text = osResponse.data.ParsedResults[0].ParsedText;
                     usedEngine = 'OCR.space';
-                    console.log('OCR.space Success - Text length:', text.length);
+                    console.log('OCR Step 5: OCR.space Success. Text length:', text.length);
+                } else if (osResponse.data?.ErrorMessage) {
+                    console.warn('OCR Step 5: OCR.space returned error:', osResponse.data.ErrorMessage);
                 }
-            } catch (err) {
-                console.warn('OCR.space failed:', (err as any).message);
+            } catch (err: any) {
+                console.warn('OCR Step 5: OCR.space request failed:', err.message);
             }
         }
 
-        // --- Step B: Fallback to Tesseract.js (Emergency Fallback) ---
+        // --- Step B: Fallback to Tesseract.js ---
         if (!text || text.length < 10) {
             try {
-                console.log('Falling back to Tesseract.js...');
-                const worker = await Tesseract.createWorker('ara+eng');
+                console.log('OCR Step 6: Falling back to Tesseract.js...');
+                // Note: v5+ syntax for better multi-lang support
+                const worker = await Tesseract.createWorker(['ara', 'eng']);
+
                 await worker.setParameters({
                     tessedit_char_whitelist: '0123456789.:-/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzابتثجحخدذرزسشصضطظعغفقكلمنهويي',
                     tessedit_pagesegmode: '6' as any
                 });
-                const tesseractResult = await worker.recognize(ocrBuffer);
-                text = tesseractResult.data.text;
+
+                const { data: { text: tText } } = await worker.recognize(ocrBuffer);
+                text = tText;
                 usedEngine = 'Tesseract.js';
-                console.log('Tesseract.js Success - Text length:', text.length);
+                console.log('OCR Step 6: Tesseract Success. Text length:', text?.length || 0);
                 await worker.terminate();
-            } catch (err) {
-                console.error('Tesseract.js failed:', err);
+            } catch (err: any) {
+                console.error('OCR Step 6: Tesseract FATAL:', err.message);
             }
         }
 
-        // 3. Parse and Merge Results with Enhanced Number Extraction
+        // 3. Final Parse
+        console.log('OCR Step 7: Parsing final text results...');
         const parsedData = this.parseReceiptText(text);
-
         if (publicUrl) parsedData.imageUrl = publicUrl;
 
         return {
