@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import ocrService from './ocr.service';
-import fs from 'fs';
+
 
 // Allowed file types for OCR processing
 const ALLOWED_MIME_TYPES = [
