@@ -18,7 +18,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 
 export class OCRController {
-    async scan(req: Request, res: Response, next: NextFunction) {
+    scan = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const file = req.file;
 
