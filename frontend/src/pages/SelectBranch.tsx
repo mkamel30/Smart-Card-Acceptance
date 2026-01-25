@@ -28,7 +28,8 @@ export default function SelectBranch() {
     const fetchBranches = async () => {
         try {
             const res = await api.get('/branches');
-            setBranches(res.data);
+            // Handle paginated response structure: { data: Branch[], pagination: { ... } }
+            setBranches(Array.isArray(res.data) ? res.data : (res.data.data || []));
         } catch (err) {
             setError('فشل تحميل الفروع');
         } finally {
