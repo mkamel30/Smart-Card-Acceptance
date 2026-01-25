@@ -5,7 +5,7 @@ import fs from 'fs';
 // Allowed file types for OCR processing
 const ALLOWED_MIME_TYPES = [
     'image/jpeg',
-    'image/jpg', 
+    'image/jpg',
     'image/png',
     'image/webp',
     'image/bmp',
@@ -15,20 +15,16 @@ const ALLOWED_MIME_TYPES = [
 // Maximum file size (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-// Minimum file dimensions (50x50 pixels)
-const MIN_DIMENSION = 50;
 
-// Maximum file dimensions (4000x4000 pixels)
-const MAX_DIMENSION = 4000;
 
 export class OCRController {
     async scan(req: Request, res: Response, next: NextFunction) {
         try {
             const file = req.file;
-            
+
             // 1. Validate file exists
             if (!file) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: 'No file uploaded',
                     code: 'NO_FILE',
                     message: 'Please upload an image file for OCR processing'
@@ -43,7 +39,7 @@ export class OCRController {
                 } catch (e) {
                     // Ignore cleanup errors
                 }
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: 'Invalid file type',
                     code: 'INVALID_FILE_TYPE',
                     message: 'Only JPEG, PNG, WebP, BMP, and TIFF images are allowed',
@@ -59,7 +55,7 @@ export class OCRController {
                 } catch (e) {
                     // Ignore cleanup errors
                 }
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: 'File too large',
                     code: 'FILE_TOO_LARGE',
                     message: `Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024}MB`,
@@ -75,7 +71,7 @@ export class OCRController {
                 } catch (e) {
                     // Ignore cleanup errors
                 }
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: 'File too small',
                     code: 'FILE_TOO_SMALL',
                     message: 'File appears to be empty or corrupted',
@@ -92,7 +88,7 @@ export class OCRController {
                 } catch (e) {
                     // Ignore cleanup errors
                 }
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: 'Invalid image file',
                     code: 'INVALID_IMAGE_HEADER',
                     message: 'File does not appear to be a valid image'
@@ -137,7 +133,7 @@ export class OCRController {
         try {
             const fs = require('fs').promises;
             const buffer = await fs.readFile(filePath);
-            
+
             // Check common image signatures (magic bytes)
             const signatures = [
                 { type: 'jpeg', signature: [0xFF, 0xD8, 0xFF] },

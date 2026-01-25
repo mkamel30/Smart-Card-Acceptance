@@ -234,7 +234,6 @@ export class AuthController {
 
             const userProfile = await prisma.user.findUnique({
                 where: { id: user.id },
-                include: { branches: true },
                 select: {
                     id: true,
                     username: true,

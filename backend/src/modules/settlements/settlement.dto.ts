@@ -177,4 +177,4 @@ export type OCRRequestInput = z.infer<typeof OCRRequestSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
-export type ExportFilterInput = z.infer<typeof ExportFilterInput>;
+export type ExportFilterInput = z.infer<typeof ExportFilterSchema>;

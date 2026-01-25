@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { branchController } from './branch.controller';
-import { adminAuthWithRateLimit, legacyAdminAuthWithRateLimit } from '../../middleware/adminAuth';
+import { legacyAdminAuthWithRateLimit } from '../../middleware/adminAuth';
 
 const router = Router();
 

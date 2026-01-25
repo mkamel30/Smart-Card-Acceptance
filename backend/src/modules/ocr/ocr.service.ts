@@ -107,7 +107,7 @@ export class OCRService {
         // 2. Perform OCR with improved engine selection
         let text = '';
         let usedEngine = 'unknown';
-        
+
         // --- Step A: Try OCR.space (Primary Engine) ---
         const OCR_SPACE_KEY = process.env.OCR_SPACE_API_KEY || "K82676068988957";
 
@@ -141,13 +141,16 @@ export class OCRService {
         if (!text || text.length < 10) {
             try {
                 console.log('Falling back to Tesseract.js...');
-                const tesseractResult = await Tesseract.recognize(ocrBuffer, 'ara+eng', {
+                const worker = await Tesseract.createWorker('ara+eng');
+                await worker.setParameters({
                     tessedit_char_whitelist: '0123456789.:-/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzابتثجحخدذرزسشصضطظعغفقكلمنهويي',
-                    tessedit_pagesegmode: '6'
+                    tessedit_pagesegmode: '6' as any
                 });
+                const tesseractResult = await worker.recognize(ocrBuffer);
                 text = tesseractResult.data.text;
                 usedEngine = 'Tesseract.js';
                 console.log('Tesseract.js Success - Text length:', text.length);
+                await worker.terminate();
             } catch (err) {
                 console.error('Tesseract.js failed:', err);
             }
@@ -373,11 +376,11 @@ export class OCRService {
         // Check if it looks like a date (DDMMYYYY, MMDDYYYY, etc.)
         if (/^(0[1-9]|[12][0-9]|3[01])(0[1-9]|[12][0-9])\d{4}$/.test(number)) return true;
         if (/^(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])\d{4}$/.test(number)) return true;
-        
+
         // Check if it looks like an Egyptian phone number
         if (/^01[0125]\d{8}$/.test(number)) return true; // Mobile
         if (/^0[2-9]\d{8,9}$/.test(number)) return true; // Landline
-        
+
         return false;
     }
 }

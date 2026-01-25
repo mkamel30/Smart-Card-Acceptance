@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
-import { CreateBranchSchema, UpdateBranchSchema, BranchFilterInput } from '../settlements/settlement.dto';
+import { CreateBranchSchema, UpdateBranchSchema, BranchFilterSchema } from '../settlements/settlement.dto';
 import { ZodError } from 'zod';
 
 export class BranchController {
@@ -10,16 +10,16 @@ export class BranchController {
         try {
             // Parse and validate query parameters
             const filter = BranchFilterSchema.parse(req.query);
-            
+
             const where: any = {};
-            
+
             if (filter.name) {
                 where.name = {
                     contains: filter.name,
                     mode: 'insensitive'
                 };
             }
-            
+
             if (filter.code) {
                 where.code = {
                     contains: filter.code,
@@ -79,7 +79,7 @@ export class BranchController {
     async getOne(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
-            
+
             const branch = await prisma.branch.findUnique({
                 where: { id },
                 select: {
@@ -97,7 +97,7 @@ export class BranchController {
             });
 
             if (!branch) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     error: 'Branch not found',
                     code: 'BRANCH_NOT_FOUND'
                 });
@@ -121,7 +121,7 @@ export class BranchController {
             });
 
             if (existingBranch) {
-                return res.status(409).json({ 
+                return res.status(409).json({
                     error: 'Branch name already exists',
                     code: 'BRANCH_NAME_EXISTS',
                     field: 'name'
@@ -135,7 +135,7 @@ export class BranchController {
                 });
 
                 if (existingCode) {
-                    return res.status(409).json({ 
+                    return res.status(409).json({
                         error: 'Branch code already exists',
                         code: 'BRANCH_CODE_EXISTS',
                         field: 'code'
@@ -176,14 +176,14 @@ export class BranchController {
             if (error.code === 'P2002') {
                 const target = error.meta?.target as string[];
                 if (target?.includes('name')) {
-                    return res.status(409).json({ 
+                    return res.status(409).json({
                         error: 'Branch name already exists',
                         code: 'BRANCH_NAME_EXISTS',
                         field: 'name'
                     });
                 }
                 if (target?.includes('code')) {
-                    return res.status(409).json({ 
+                    return res.status(409).json({
                         error: 'Branch code already exists',
                         code: 'BRANCH_CODE_EXISTS',
                         field: 'code'
@@ -207,7 +207,7 @@ export class BranchController {
             });
 
             if (!existingBranch) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     error: 'Branch not found',
                     code: 'BRANCH_NOT_FOUND'
                 });
@@ -220,7 +220,7 @@ export class BranchController {
                 });
 
                 if (duplicateName) {
-                    return res.status(409).json({ 
+                    return res.status(409).json({
                         error: 'Branch name already exists',
                         code: 'BRANCH_NAME_EXISTS',
                         field: 'name'
@@ -235,7 +235,7 @@ export class BranchController {
                 });
 
                 if (duplicateCode) {
-                    return res.status(409).json({ 
+                    return res.status(409).json({
                         error: 'Branch code already exists',
                         code: 'BRANCH_CODE_EXISTS',
                         field: 'code'
@@ -247,8 +247,8 @@ export class BranchController {
                 where: { id },
                 data: {
                     ...(validatedData.name && { name: validatedData.name.trim() }),
-                    ...(validatedData.code !== undefined && { 
-                        code: validatedData.code?.trim() || null 
+                    ...(validatedData.code !== undefined && {
+                        code: validatedData.code?.trim() || null
                     })
                 },
                 select: {
@@ -279,14 +279,14 @@ export class BranchController {
             if (error.code === 'P2002') {
                 const target = error.meta?.target as string[];
                 if (target?.includes('name')) {
-                    return res.status(409).json({ 
+                    return res.status(409).json({
                         error: 'Branch name already exists',
                         code: 'BRANCH_NAME_EXISTS',
                         field: 'name'
                     });
                 }
                 if (target?.includes('code')) {
-                    return res.status(409).json({ 
+                    return res.status(409).json({
                         error: 'Branch code already exists',
                         code: 'BRANCH_CODE_EXISTS',
                         field: 'code'
@@ -317,7 +317,7 @@ export class BranchController {
             });
 
             if (!existingBranch) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     error: 'Branch not found',
                     code: 'BRANCH_NOT_FOUND'
                 });
@@ -325,7 +325,7 @@ export class BranchController {
 
             // Prevent deletion if branch has settlements
             if (existingBranch._count.settlements > 0) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: 'Cannot delete branch with existing settlements',
                     code: 'BRANCH_HAS_SETTLEMENTS',
                     settlementCount: existingBranch._count.settlements
