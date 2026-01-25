@@ -2,12 +2,101 @@ import { Request, Response, NextFunction } from 'express';
 import ocrService from './ocr.service';
 import fs from 'fs';
 
+// Allowed file types for OCR processing
+const ALLOWED_MIME_TYPES = [
+    'image/jpeg',
+    'image/jpg', 
+    'image/png',
+    'image/webp',
+    'image/bmp',
+    'image/tiff'
+];
+
+// Maximum file size (10MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// Minimum file dimensions (50x50 pixels)
+const MIN_DIMENSION = 50;
+
+// Maximum file dimensions (4000x4000 pixels)
+const MAX_DIMENSION = 4000;
+
 export class OCRController {
     async scan(req: Request, res: Response, next: NextFunction) {
         try {
             const file = req.file;
+            
+            // 1. Validate file exists
             if (!file) {
-                return res.status(400).json({ message: 'No file uploaded' });
+                return res.status(400).json({ 
+                    error: 'No file uploaded',
+                    code: 'NO_FILE',
+                    message: 'Please upload an image file for OCR processing'
+                });
+            }
+
+            // 2. Validate file type
+            if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+                // Clean up invalid file
+                try {
+                    fs.unlinkSync(file.path);
+                } catch (e) {
+                    // Ignore cleanup errors
+                }
+                return res.status(400).json({ 
+                    error: 'Invalid file type',
+                    code: 'INVALID_FILE_TYPE',
+                    message: 'Only JPEG, PNG, WebP, BMP, and TIFF images are allowed',
+                    allowedTypes: ALLOWED_MIME_TYPES
+                });
+            }
+
+            // 3. Validate file size
+            if (file.size > MAX_FILE_SIZE) {
+                // Clean up oversized file
+                try {
+                    fs.unlinkSync(file.path);
+                } catch (e) {
+                    // Ignore cleanup errors
+                }
+                return res.status(400).json({ 
+                    error: 'File too large',
+                    code: 'FILE_TOO_LARGE',
+                    message: `Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+                    maxSize: MAX_FILE_SIZE,
+                    receivedSize: file.size
+                });
+            }
+
+            // 4. Validate file size is not too small (avoid empty files)
+            if (file.size < 1024) { // 1KB minimum
+                try {
+                    fs.unlinkSync(file.path);
+                } catch (e) {
+                    // Ignore cleanup errors
+                }
+                return res.status(400).json({ 
+                    error: 'File too small',
+                    code: 'FILE_TOO_SMALL',
+                    message: 'File appears to be empty or corrupted',
+                    minSize: 1024,
+                    receivedSize: file.size
+                });
+            }
+
+            // 5. Additional security: Check file header (magic bytes)
+            const isValidImage = await this.validateImageHeader(file.path);
+            if (!isValidImage) {
+                try {
+                    fs.unlinkSync(file.path);
+                } catch (e) {
+                    // Ignore cleanup errors
+                }
+                return res.status(400).json({ 
+                    error: 'Invalid image file',
+                    code: 'INVALID_IMAGE_HEADER',
+                    message: 'File does not appear to be a valid image'
+                });
             }
 
             const result = await ocrService.extractAndParse(file);
@@ -23,10 +112,48 @@ export class OCRController {
                 success: true,
                 data: result.data,
                 rawText: result.rawText,
-                engine: result.engine
+                engine: result.engine,
+                processingInfo: {
+                    originalSize: file.size,
+                    originalType: file.mimetype,
+                    processingTime: Date.now()
+                }
             });
         } catch (error) {
+            // Clean up file on error
+            if (req.file) {
+                try {
+                    fs.unlinkSync(req.file.path);
+                } catch (e) {
+                    // Ignore cleanup errors
+                }
+            }
+            console.error('OCR processing error:', error);
             next(error);
+        }
+    }
+
+    private async validateImageHeader(filePath: string): Promise<boolean> {
+        try {
+            const fs = require('fs').promises;
+            const buffer = await fs.readFile(filePath);
+            
+            // Check common image signatures (magic bytes)
+            const signatures = [
+                { type: 'jpeg', signature: [0xFF, 0xD8, 0xFF] },
+                { type: 'png', signature: [0x89, 0x50, 0x4E, 0x47] },
+                { type: 'webp', signature: [0x52, 0x49, 0x46, 0x46] }, // RIFF
+                { type: 'bmp', signature: [0x42, 0x4D] }, // BM
+                { type: 'tiff', signature: [0x49, 0x49, 0x2A, 0x00] } // II*\\0
+            ];
+
+            return signatures.some(sig => {
+                if (buffer.length < sig.signature.length) return false;
+                return sig.signature.every((byte, index) => buffer[index] === byte);
+            });
+        } catch (error) {
+            console.error('Image header validation error:', error);
+            return false;
         }
     }
 }
