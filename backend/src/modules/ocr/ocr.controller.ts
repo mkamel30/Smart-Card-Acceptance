@@ -33,12 +33,6 @@ export class OCRController {
 
             // 2. Validate file type
             if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-                // Clean up invalid file
-                try {
-                    fs.unlinkSync(file.path);
-                } catch (e) {
-                    // Ignore cleanup errors
-                }
                 return res.status(400).json({
                     error: 'Invalid file type',
                     code: 'INVALID_FILE_TYPE',
@@ -49,12 +43,6 @@ export class OCRController {
 
             // 3. Validate file size
             if (file.size > MAX_FILE_SIZE) {
-                // Clean up oversized file
-                try {
-                    fs.unlinkSync(file.path);
-                } catch (e) {
-                    // Ignore cleanup errors
-                }
                 return res.status(400).json({
                     error: 'File too large',
                     code: 'FILE_TOO_LARGE',
@@ -66,11 +54,6 @@ export class OCRController {
 
             // 4. Validate file size is not too small (avoid empty files)
             if (file.size < 1024) { // 1KB minimum
-                try {
-                    fs.unlinkSync(file.path);
-                } catch (e) {
-                    // Ignore cleanup errors
-                }
                 return res.status(400).json({
                     error: 'File too small',
                     code: 'FILE_TOO_SMALL',
@@ -81,13 +64,9 @@ export class OCRController {
             }
 
             // 5. Additional security: Check file header (magic bytes)
-            const isValidImage = await this.validateImageHeader(file.path);
+            // Using buffer instead of path for cloud compatibility
+            const isValidImage = this.validateImageHeader(file.buffer);
             if (!isValidImage) {
-                try {
-                    fs.unlinkSync(file.path);
-                } catch (e) {
-                    // Ignore cleanup errors
-                }
                 return res.status(400).json({
                     error: 'Invalid image file',
                     code: 'INVALID_IMAGE_HEADER',
@@ -96,13 +75,6 @@ export class OCRController {
             }
 
             const result = await ocrService.extractAndParse(file);
-
-            // Delete the temporary file after processing
-            try {
-                fs.unlinkSync(file.path);
-            } catch (e) {
-                // Ignore cleanup errors
-            }
 
             res.status(200).json({
                 success: true,
@@ -116,23 +88,14 @@ export class OCRController {
                 }
             });
         } catch (error) {
-            // Clean up file on error
-            if (req.file) {
-                try {
-                    fs.unlinkSync(req.file.path);
-                } catch (e) {
-                    // Ignore cleanup errors
-                }
-            }
             console.error('OCR processing error:', error);
             next(error);
         }
     }
 
-    private async validateImageHeader(filePath: string): Promise<boolean> {
+    private validateImageHeader(buffer: Buffer): boolean {
         try {
-            const fs = require('fs').promises;
-            const buffer = await fs.readFile(filePath);
+            if (!buffer || buffer.length === 0) return false;
 
             // Check common image signatures (magic bytes)
             const signatures = [
