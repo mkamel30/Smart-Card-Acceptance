@@ -17,9 +17,8 @@ export const CreateSettlementSchema = z.object({
     serviceCategory: ServiceCategorySchema.default('SMART'),
     subService: z.string().max(100).optional(),
     merchantCode: z.string()
-        .min(8, 'Merchant code must be at least 8 digits')
-        .max(20, 'Merchant code cannot exceed 20 digits')
-        .regex(/^\d+$/, 'Merchant code must contain only digits'),
+        .min(1, 'Merchant code is required')
+        .max(20, 'Merchant code cannot exceed 20 digits'),
     merchantName: z.string().max(200).optional(),
     batchNumber: z.string()
         .min(1, 'Batch number is required')
@@ -31,9 +30,8 @@ export const CreateSettlementSchema = z.object({
         .regex(/^\d+$/, 'Approval number must contain only digits')
         .optional(),
     cardBin: z.string()
-        .min(6, 'Card BIN must be exactly 6 digits')
-        .max(6, 'Card BIN must be exactly 6 digits')
-        .regex(/^\d+$/, 'Card BIN must contain only digits')
+        .min(6, 'Card BIN must be at least 6 characters')
+        .max(6, 'Card BIN cannot exceed 6 characters')
         .optional(),
     last4Digits: z.string()
         .length(4, 'Last 4 digits must be exactly 4 digits')

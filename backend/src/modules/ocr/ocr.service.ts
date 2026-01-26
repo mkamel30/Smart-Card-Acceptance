@@ -122,17 +122,21 @@ export class OCRService {
         }
 
         // 2. CARD LOGIC (Search after "Sale")
+        // Try to find BIN (first 6) anywhere in text first
+        const globalBinMatch = digitFocusText.match(/\b(\d{6})[\*xX\s\-\.]{4,}/);
+        if (globalBinMatch) data.cardBin = globalBinMatch[1];
+
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].toUpperCase().includes('SALE')) {
                 for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
                     const l = lines[j].trim();
                     if (l.length < 4) continue;
                     // Extract last 4 digits even if letters are mixed (G -> 9, S -> 5)
-                    let endPart = l.slice(-6).replace(/\s/g, '');
-                    let numericEnd = endPart.replace(/G/g, '9').replace(/S/g, '5').replace(/O/g, '0').match(/\d{4}/);
+                    let endPart = l.slice(-10).replace(/\s/g, '');
+                    let numericEnd = endPart.replace(/G/g, '9').replace(/S/g, '5').replace(/O/g, '0').match(/\d{4}$/);
                     if (numericEnd) {
                         data.last4Digits = numericEnd[0];
-                        data.cardBin = '******';
+                        if (!data.cardBin) data.cardBin = '000000'; // Default if BIN missing
                         break;
                     }
                 }
@@ -144,12 +148,18 @@ export class OCRService {
         const batchMatch = digitFocusText.match(/(?:BATCH|BATC|ATCH)[\s\S]{0,20}?(\d{6})/i);
         if (batchMatch) data.batchNumber = batchMatch[1];
 
-        const authMatch = digitFocusText.match(/(?:AUTH|APPR|APPROVAL)[\s\S]{0,20}?(\d{6})/i);
+        const authMatch = digitFocusText.match(/(?:AUTH|APPR|APPROVAL|الموافقة)[\s\S]{0,20}?(\d{6})/i);
         if (authMatch) data.approvalNumber = authMatch[1];
 
         // 4. MID & TID
-        const midMatch = digitFocusText.match(/(?:MID|MIC|MERCHANT)[\s\.:#]*(\d{10,15})/i);
+        const midMatch = digitFocusText.match(/(?:MID|MIC|MERCHANT)[\s\.:#]*(\d{8,15})/i);
         if (midMatch) data.merchantCode = midMatch[1];
+
+        // Ensure merchantCode is filled for validation
+        if (!data.merchantCode) {
+            const anyLongNum = digitFocusText.match(/\b\d{10,15}\b/);
+            if (anyLongNum) data.merchantCode = anyLongNum[0];
+        }
 
         // 5. DATE
         const dateMatch = digitFocusText.match(/\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\b/);
