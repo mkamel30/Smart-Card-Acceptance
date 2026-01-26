@@ -61,28 +61,24 @@ export class OCRService {
             const width = metadata.width || 1000;
             const height = metadata.height || 2000;
 
-            // Strategy: Logical Zones with specific image processing for each
-
-            // 1. Header (Top 40%) -> Date, Time, Merchant
+            // ZONE 1: Header (Top 40%) -> Date, Time, Merchant
             const headerBuffer = await image.clone()
                 .extract({ left: 0, top: 0, width: width, height: Math.floor(height * 0.4) })
-                .grayscale() // Basic grayscale is enough for clear headers
+                .grayscale()
                 .resize({ width: 1500 })
                 .toBuffer();
 
-            // 2. Footer (Bottom 40%) -> Amount, Batch, Card, Auth
-            // We apply moderate thresholding here to sharpen numbers but avoid burning decimals
+            // ZONE 2: Footer (Bottom 60%) -> Amount, Batch, Card, Auth
+            // Adjusted threshold to 140 to be less aggressive (fixes 4 read as 3)
             const footerBuffer = await image.clone()
                 .extract({ left: 0, top: Math.floor(height * 0.4), width: width, height: Math.floor(height * 0.6) })
                 .grayscale()
                 .normalize()
-                .threshold(160) // Slightly aggressive to make text pop against paper noise
+                .threshold(140)
                 .resize({ width: 1500 })
                 .toBuffer();
 
-            // Run Tesseract on both zones
             const worker = await Tesseract.createWorker(['eng', 'ara']);
-            // Allow more symbols for footer to catch stars **** and decimals
             await worker.setParameters({
                 tessedit_char_whitelist: '0123456789.:-/,ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzابتثجحخدذرزسشصضطظعغفقكلمنهويي*# ',
                 tessedit_pagesegmode: '6' as any
@@ -92,10 +88,7 @@ export class OCRService {
             const { data: { text: footerText } } = await worker.recognize(footerBuffer);
 
             await worker.terminate();
-
-            // Combine text for parsing
             text = headerText + '\n' + footerText;
-            console.log('OCR: Segmentation Complete.');
 
         } catch (e: any) {
             console.error('OCR Fatal Error:', e.message);
@@ -114,9 +107,9 @@ export class OCRService {
         const cleanText = text.replace(/[\r\n]+/g, '\n').replace(/[I|l]/g, '1');
         const digitFocusText = cleanText.replace(/(\d)\s+(?=\d|[.,]\d)/g, '$1');
 
-        console.log('--- Parsing Logic Start ---');
+        console.log('--- OCR Final Parsing ---');
 
-        // 1. DATE: Matches 22/01/2026
+        // 1. DATE: 22/01/2026
         const dateMatch = digitFocusText.match(/\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\b/);
         if (dateMatch) {
             const parts = dateMatch[1].split(/[/\-\.]/);
@@ -125,55 +118,39 @@ export class OCRService {
             data.date = `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
         }
 
-        // 2. TIME: Matches 14:00:13
+        // 2. TIME: 14:00:13
         const timeMatch = cleanText.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
         if (timeMatch) data.time = timeMatch[1];
 
-        // 3. AMOUNT (T.AMOUNT is priority)
-        // Helper to clean amount string
+        // 3. AMOUNT: Strict capture for 1,334.21
         const cleanAmount = (str: string) => parseFloat(str.replace(/,/g, ''));
-
-        // Priority 1: T.AMOUNT (Total Amount)
-        const totalMatch = digitFocusText.match(/(?:T\.AMOUNT|TOTAL|الإجمالي)[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
-        if (totalMatch) {
-            data.totalAmount = cleanAmount(totalMatch[1]);
-        } else {
-            // Priority 2: Generic AMOUNT if T.AMOUNT not found
-            const amountMatch = digitFocusText.match(/(?:AMOUNT|SALE|المبلغ)[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
-            if (amountMatch) {
-                data.totalAmount = cleanAmount(amountMatch[1]);
-            }
+        const amountMatch = digitFocusText.match(/(?:T\.AMOUNT|TOTAL|SALE|AMOUNT|المبلغ|الإجمالي)[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
+        if (amountMatch) {
+            data.totalAmount = cleanAmount(amountMatch[1]);
         }
 
-        // 4. BATCH (Strict 6 digits, can include leading zeros)
-        // Matches BATCH NO.000010 or BATCH 000010
+        // 4. BATCH: Exactly 6 digits
         const batchMatch = digitFocusText.match(/(?:BATCH)[\s\S]{0,15}?(\d{6})\b/i);
-        if (batchMatch) {
-            data.batchNumber = batchMatch[1];
-        } else {
-            // Fallback for NO.000010
-            const noMatch = digitFocusText.match(/NO\.[\s]*(\d{6})/i);
-            if (noMatch) data.batchNumber = noMatch[1];
-        }
+        if (batchMatch) data.batchNumber = batchMatch[1];
 
-        // 5. APPROVAL / AUTH CODE
-        const authMatch = digitFocusText.match(/(?:AUTH|APPR|APPROVAL)[\s\S]{0,15}?(\d{6})/i);
+        // 5. APPROVAL CODE
+        const authMatch = digitFocusText.match(/(?:AUTH|APPR|APPROVAL|الموافقة)[\s\S]{0,15}?(\d{6})/i);
         if (authMatch) data.approvalNumber = authMatch[1];
 
-        // 6. CARD INFO (Masked)
-        // Looks for a line with at least 4 stars and ends with 4 digits: ************9009
-        const cardMatch = digitFocusText.match(/(\*{4,})[\s]*(\d{4})/);
+        // 6. RECEIPT # / INVOICE
+        const receiptMatch = digitFocusText.match(/(?:RECEIPT\s*#|الايصال)[\s\.:]*(\d+)/i);
+        if (receiptMatch) data.invoiceNumber = receiptMatch[1];
+
+        // 7. CARD LAST 4: ************9009
+        const cardMatch = digitFocusText.match(/(\*{4,})\s*(\d{4})\b/);
         if (cardMatch) {
-            data.cardBin = '******'; // Always return stars for BIN if masked
+            data.cardBin = '******';
             data.last4Digits = cardMatch[2];
         }
 
-        // 7. MERCHANT & TERMINAL
-        const midMatch = digitFocusText.match(/(?:MID|MERCHANT)[\s\.:]*(\d{10,15})/i);
+        // 8. MERCHANT (MID) 
+        const midMatch = digitFocusText.match(/(?:MID|MERCHANT|التاجر)[\s\.:#]*(\d{10,15})/i);
         if (midMatch) data.merchantCode = midMatch[1];
-
-        const tidMatch = digitFocusText.match(/(?:TID|TERMINAL)[\s\.:]*(\d{8})/i);
-        if (tidMatch) data.terminalId = tidMatch[1];
 
         return data;
     }
