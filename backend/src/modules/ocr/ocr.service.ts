@@ -64,16 +64,17 @@ export class OCRService {
             const metadata = await image.metadata();
             console.log(`OCR Metadata: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
 
-            // 1. Prepare Buffer for OCR (Grayscale, Normalized)
+            // 1. Prepare Buffer for OCR (Grayscale, High Contrast, Upscaled)
+            // Tesseract/OCR Engines work much better with larger, high-contrast text
             console.log('OCR Step 2: Preparing OCR buffer...');
             ocrBuffer = await image
                 .rotate()
-                .resize({ width: 1200, withoutEnlargement: true })
+                .resize({ width: 2000, withoutEnlargement: true }) // Upscale for better text recognition
                 .grayscale()
-                .normalize()
+                .linear(1.5, -20) // Increase contrast (slope, offset)
                 .toFormat('png')
                 .toBuffer();
-            console.log('OCR Step 2: OCR buffer ready.');
+            console.log('OCR Step 2: OCR buffer ready (Upscaled).');
 
             // 2. Prepare Buffer for Storage (WebP)
             console.log('OCR Step 3: Preparing storage buffer...');
@@ -114,32 +115,35 @@ export class OCRService {
         let text = '';
         let usedEngine = 'unknown';
 
-        // --- Step A: Try OCR.space ---
+        // --- Step A: Try OCR.space (Primary Engine) ---
+        // Using Base64 to avoid URL visibility issues
         const OCR_SPACE_KEY = process.env.OCR_SPACE_API_KEY || "K82676068988957";
 
-        if (OCR_SPACE_KEY && publicUrl) {
+        if (OCR_SPACE_KEY) {
             try {
-                console.log('OCR Step 5: Calling OCR.space...');
+                console.log('OCR Step 5: Calling OCR.space via Base64...');
+                const base64Image = `data:image/png;base64,${ocrBuffer.toString('base64')}`;
+
                 const osFormData = new FormData();
-                osFormData.append('url', publicUrl);
+                osFormData.append('base64Image', base64Image);
                 osFormData.append('language', 'eng+ara');
                 osFormData.append('OCREngine', '2');
                 osFormData.append('scale', 'true');
 
                 const osResponse = await axios.post('https://api.ocr.space/parse/image', osFormData, {
                     headers: { ...osFormData.getHeaders(), 'apikey': OCR_SPACE_KEY },
-                    timeout: 20000
+                    timeout: 30000
                 });
 
                 if (osResponse.data?.ParsedResults?.[0]?.ParsedText) {
                     text = osResponse.data.ParsedResults[0].ParsedText;
                     usedEngine = 'OCR.space';
                     console.log('OCR Step 5: OCR.space Success. Text length:', text.length);
-                } else if (osResponse.data?.ErrorMessage) {
-                    console.warn('OCR Step 5: OCR.space returned error:', osResponse.data.ErrorMessage);
+                } else {
+                    console.warn('OCR Step 5: OCR.space failed.', osResponse.data?.ErrorMessage);
                 }
             } catch (err: any) {
-                console.warn('OCR Step 5: OCR.space request failed:', err.message);
+                console.warn('OCR Step 5: OCR.space Base64 request failed:', err.message);
             }
         }
 
@@ -147,11 +151,10 @@ export class OCRService {
         if (!text || text.length < 10) {
             try {
                 console.log('OCR Step 6: Falling back to Tesseract.js...');
-                // Note: v5+ syntax for better multi-lang support
                 const worker = await Tesseract.createWorker(['ara', 'eng']);
 
                 await worker.setParameters({
-                    tessedit_char_whitelist: '0123456789.:-/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzابتثجحخدذرزسشصضطظعغفقكلمنهويي',
+                    tessedit_char_whitelist: '0123456789.:-/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzابتثجحخدذرزسشصضطظعغفقكلمنهويي* ',
                     tessedit_pagesegmode: '6' as any
                 });
 
