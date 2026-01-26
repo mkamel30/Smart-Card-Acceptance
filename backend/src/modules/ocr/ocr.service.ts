@@ -122,11 +122,17 @@ export class OCRService {
         const timeMatch = cleanText.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
         if (timeMatch) data.time = timeMatch[1];
 
-        // 3. AMOUNT: Strict capture for 1,334.21
+        // 3. AMOUNT (Prioritize base AMOUNT over T.AMOUNT for net value)
         const cleanAmount = (str: string) => parseFloat(str.replace(/,/g, ''));
-        const amountMatch = digitFocusText.match(/(?:T\.AMOUNT|TOTAL|SALE|AMOUNT|المبلغ|الإجمالي)[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
-        if (amountMatch) {
-            data.totalAmount = cleanAmount(amountMatch[1]);
+
+        // Search for "AMOUNT" first (specifically avoiding T.AMOUNT if possible)
+        const baseAmountMatch = digitFocusText.match(/\bAMOUNT[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
+        const totalAmountMatch = digitFocusText.match(/(?:T\.AMOUNT|TOTAL|الإجمالي)[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
+
+        if (baseAmountMatch) {
+            data.totalAmount = cleanAmount(baseAmountMatch[1]);
+        } else if (totalAmountMatch) {
+            data.totalAmount = cleanAmount(totalAmountMatch[1]);
         }
 
         // 4. BATCH: Exactly 6 digits
@@ -141,11 +147,15 @@ export class OCRService {
         const receiptMatch = digitFocusText.match(/(?:RECEIPT\s*#|الايصال)[\s\.:]*(\d+)/i);
         if (receiptMatch) data.invoiceNumber = receiptMatch[1];
 
-        // 7. CARD LAST 4: ************9009
-        const cardMatch = digitFocusText.match(/(\*{4,})\s*(\d{4})\b/);
+        // 7. CARD INFO (BIN & Last 4)
+        // Matches: 412345******9009 or ************9009 or **** 9009
+        const cardMatch = digitFocusText.match(/(\d{0,6})[\*xX\s\-]{4,}(\d{4})\b/);
         if (cardMatch) {
-            data.cardBin = '******';
-            data.last4Digits = cardMatch[2];
+            const prefix = cardMatch[1];
+            const last4 = cardMatch[2];
+
+            data.cardBin = (prefix && prefix.length === 6) ? prefix : '******';
+            data.last4Digits = last4;
         }
 
         // 8. MERCHANT (MID) 
