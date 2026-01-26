@@ -55,35 +55,24 @@ export class OCRService {
 
     async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string; engine: string }> {
 
-        let ocrBuffer = file.buffer;
-        let storageBuffer = file.buffer;
-
         try {
             console.log('OCR Step 1: Starting image processing with Sharp...');
             const image = sharp(file.buffer);
-            const metadata = await image.metadata();
-            console.log(`OCR Metadata: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
-
-            // 1. Prepare Buffer for OCR (Grayscale, High Contrast, Upscaled)
-            // Tesseract/OCR Engines work much better with larger, high-contrast text
-            console.log('OCR Step 2: Preparing OCR buffer...');
+            // Pre-process for OCR engines
             ocrBuffer = await image
                 .rotate()
-                .resize({ width: 2000, withoutEnlargement: true }) // Upscale for better text recognition
+                .resize({ width: 1800, withoutEnlargement: true })
                 .grayscale()
-                .linear(1.5, -20) // Increase contrast (slope, offset)
+                .sharpen()
                 .toFormat('png')
                 .toBuffer();
-            console.log('OCR Step 2: OCR buffer ready (Upscaled).');
 
-            // 2. Prepare Buffer for Storage (WebP)
-            console.log('OCR Step 3: Preparing storage buffer...');
+            // WebP Storage optimized for cloud view
             storageBuffer = await sharp(file.buffer)
                 .rotate()
-                .resize({ width: 800, withoutEnlargement: true })
-                .webp({ quality: 70 })
+                .resize({ width: 1000 })
+                .webp({ quality: 75 })
                 .toBuffer();
-            console.log('OCR Step 3: Storage buffer ready.');
         } catch (e: any) {
             console.warn('OCR Warning: Image optimization failed, using original:', e.message);
         }
@@ -91,66 +80,56 @@ export class OCRService {
         // 1. Upload to Supabase Storage
         let publicUrl = '';
         try {
-            console.log('OCR Step 4: Uploading to Supabase...');
-            const fileName = `receipts/${Date.now()}_s.webp`;
+            const fileName = `receipts/${Date.now()}.webp`;
             const { error } = await supabase.storage
                 .from('receipts')
-                .upload(fileName, storageBuffer, {
-                    contentType: 'image/webp',
-                    upsert: false
-                });
+                .upload(fileName, storageBuffer, { contentType: 'image/webp' });
 
             if (!error) {
-                const urlData = supabase.storage.from('receipts').getPublicUrl(fileName);
-                publicUrl = urlData.data.publicUrl;
-                console.log('OCR Step 4 Success:', publicUrl);
-            } else {
-                console.error('OCR Step 4 Error (Supabase):', error);
+                publicUrl = supabase.storage.from('receipts').getPublicUrl(fileName).data.publicUrl;
+                console.log('OCR History Saved:', publicUrl);
             }
         } catch (err: any) {
-            console.error('OCR Step 4 FATAL:', err.message);
+            console.error('Supabase History Error:', err.message);
         }
 
         // 2. Perform OCR
         let text = '';
         let usedEngine = 'unknown';
 
-        // --- Step A: Try OCR.space (Primary Engine) ---
-        // Using Base64 to avoid URL visibility issues
+        // --- Step A: Try OCR.space (Direct Buffer Upload) ---
         const OCR_SPACE_KEY = process.env.OCR_SPACE_API_KEY || "K82676068988957";
 
         if (OCR_SPACE_KEY) {
             try {
-                console.log('OCR Step 5: Calling OCR.space via Base64...');
-                const base64Image = `data:image/png;base64,${ocrBuffer.toString('base64')}`;
-
+                console.log('OCR Step 5: Calling OCR.space (Binary Buffer)...');
                 const osFormData = new FormData();
-                osFormData.append('base64Image', base64Image);
+                // Pass the processed buffer directly
+                osFormData.append('file', ocrBuffer, { filename: 'receipt.png', contentType: 'image/png' });
                 osFormData.append('language', 'eng+ara');
                 osFormData.append('OCREngine', '2');
                 osFormData.append('scale', 'true');
 
                 const osResponse = await axios.post('https://api.ocr.space/parse/image', osFormData, {
                     headers: { ...osFormData.getHeaders(), 'apikey': OCR_SPACE_KEY },
-                    timeout: 30000
+                    timeout: 25000
                 });
 
                 if (osResponse.data?.ParsedResults?.[0]?.ParsedText) {
                     text = osResponse.data.ParsedResults[0].ParsedText;
-                    usedEngine = 'OCR.space';
-                    console.log('OCR Step 5: OCR.space Success. Text length:', text.length);
+                    usedEngine = 'OCR.space (Primary)';
                 } else {
-                    console.warn('OCR Step 5: OCR.space failed.', osResponse.data?.ErrorMessage);
+                    console.warn('OCR.space responded but no text. Code:', osResponse.data?.OCRExitCode);
                 }
             } catch (err: any) {
-                console.warn('OCR Step 5: OCR.space Base64 request failed:', err.message);
+                console.warn('OCR.space Error:', err.message);
             }
         }
 
-        // --- Step B: Fallback to Tesseract.js ---
-        if (!text || text.length < 10) {
+        // --- Step B: Fallback to Tesseract.js (Local Emergency) ---
+        if (!text || text.length < 15) {
             try {
-                console.log('OCR Step 6: Falling back to Tesseract.js...');
+                console.log('OCR Step 6: Falling back to Tesseract.js local...');
                 const worker = await Tesseract.createWorker(['ara', 'eng']);
 
                 await worker.setParameters({
@@ -160,16 +139,14 @@ export class OCRService {
 
                 const { data: { text: tText } } = await worker.recognize(ocrBuffer);
                 text = tText;
-                usedEngine = 'Tesseract.js';
-                console.log('OCR Step 6: Tesseract Success. Text length:', text?.length || 0);
+                usedEngine = 'Tesseract.js (Backup)';
                 await worker.terminate();
             } catch (err: any) {
-                console.error('OCR Step 6: Tesseract FATAL:', err.message);
+                console.error('Tesseract failed:', err.message);
             }
         }
 
-        // 3. Final Parse
-        console.log('OCR Step 7: Parsing final text results...');
+        // 3. Final Unified Parsing
         const parsedData = this.parseReceiptText(text);
         if (publicUrl) parsedData.imageUrl = publicUrl;
 
