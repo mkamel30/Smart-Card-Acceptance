@@ -60,14 +60,16 @@ export class OCRService {
             console.log('OCR: Processing image in memory...');
             const image = sharp(file.buffer);
 
-            // Enhance for OCR: Grayscale + High Contrast
+            // Enhance for OCR: Resize more aggressively, Grayscale + High Contrast
+            // Using 2x scale and thresholding to make text pop for Tesseract
             ocrBuffer = await image
                 .rotate()
-                .resize({ width: 1200 })
+                .resize({ width: 1600, fit: 'inside' })
                 .grayscale()
                 .normalize()
-                .threshold(160)
-                .toFormat('png', { compressionLevel: 9 })
+                .threshold(160) // High contrast BW
+                .sharpen()
+                .toFormat('png')
                 .toBuffer();
         } catch (e: any) {
             console.warn('Preprocessing failed:', e.message);
@@ -92,7 +94,7 @@ export class OCRService {
 
                 const osResponse = await axios.post('https://api.ocr.space/parse/image', osFormData, {
                     headers: { ...osFormData.getHeaders(), 'apikey': OCR_SPACE_KEY },
-                    timeout: 25000
+                    timeout: 45000 // Increased timeout for stability
                 });
 
                 if (osResponse.data?.ParsedResults?.[0]?.ParsedText) {
@@ -180,8 +182,9 @@ export class OCRService {
         if (authMatch) data.approvalNumber = authMatch[1];
 
         // 7. BATCH
-        const batchMatch = digitFocusText.match(/(?:BATCH)[:\.\s#]*(\d+)/i);
-        if (batchMatch) data.batchNumber = batchMatch[1];
+        // Allow 1-6 digits to catch short batch numbers or partial reads
+        const batchMatch = digitFocusText.match(/(?:BATCH)[:\.\s#]*(\d{1,6})\b/i);
+        if (batchMatch) data.batchNumber = batchMatch[1].padStart(6, '0'); // Pad for consistency
 
         // 8. CARD BIN & LAST 4
         const cardMatch = digitFocusText.match(/(\d{0,6})[\*xX\s\-\.]{4,}(\d{4})\b/);
