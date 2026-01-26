@@ -52,36 +52,29 @@ export class OCRService {
 
     async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string; engine: string }> {
         let text = '';
-        const engine = 'Tesseract (Hybrid-Pro)';
+        const engine = 'Tesseract (Fast-Pro)';
 
         try {
-            console.log('OCR: Starting Ultra-Clarity Mode...');
+            console.log('OCR: Processing image (Fast Mode)...');
             const image = sharp(file.buffer);
 
-            // Extreme Pre-processing for small digits (like 8/3)
-            // 1. Resize 3x to make fonts huge
-            // 2. Grayscale + High Sharpening
-            // 3. Adaptive handling (No threshold to keep decimal points)
+            // Balanced processing for speed and accuracy
             const processedBuffer = await image
-                .resize({ width: 2500, fit: 'inside' })
+                .resize({ width: 1800 }) // 2x approx for typical receipts
                 .grayscale()
-                .sharpen({ sigma: 2 }) // Make edges very sharp
+                .normalize()
                 .toFormat('png')
                 .toBuffer();
 
             const worker = await Tesseract.createWorker(['eng', 'ara']);
             await worker.setParameters({
                 tessedit_char_whitelist: '0123456789.:-/,ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzابتثجحخدذرزسشصضطظعغفقكلمنهويي*# ',
-                tessedit_pagesegmode: '1' as any // Automatic page segmentation with OSD
+                tessedit_pagesegmode: '3' as any
             });
 
             const { data: { text: fullText } } = await worker.recognize(processedBuffer);
             text = fullText;
             await worker.terminate();
-
-            console.log('--- OCR RAW START ---');
-            console.log(text);
-            console.log('--- OCR RAW END ---');
 
         } catch (e: any) {
             console.error('OCR Fatal Error:', e.message);
@@ -100,7 +93,9 @@ export class OCRService {
         const cleanText = text.replace(/[\r\n]+/g, '\n').replace(/[I|l]/g, '1');
         const digitFocusText = cleanText.replace(/(\d)\s+(?=\d|[.,]\d)/g, '$1');
 
-        // 1. DATE: 22/01/2026
+        console.log('--- Optimized Parsing ---');
+
+        // 1. DATE: Matches 22/01/2026 or similar
         const dateMatch = digitFocusText.match(/\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\b/);
         if (dateMatch) {
             const parts = dateMatch[1].split(/[/\-\.]/);
@@ -109,60 +104,70 @@ export class OCRService {
             data.date = `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
         }
 
-        // 2. TIME: 14:00:13
+        // 2. TIME
         const timeMatch = cleanText.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
         if (timeMatch) data.time = timeMatch[1];
 
-        // 3. AMOUNT (Strategy: Find all decimals and pick the one labeled base AMOUNT)
-        const cleanAmount = (str: string) => parseFloat(str.replace(/,/g, ''));
+        // 3. AMOUNT (The Smallest Decimal Logic - Reliable for Net Amount)
+        const cleanAmount = (str: string) => {
+            const cleaned = str.replace(/,/g, '');
+            return parseFloat(cleaned);
+        };
 
-        // Find line that specifically says AMOUNT (net) and NOT T.AMOUNT (total)
-        const lines = cleanText.split('\n');
-        for (const line of lines) {
-            const upLine = line.toUpperCase();
-            if (upLine.includes('AMOUNT') && !upLine.includes('T.AMOUNT') && !upLine.includes('TOTAL')) {
-                const match = line.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/);
-                if (match) {
-                    data.totalAmount = cleanAmount(match[1]);
-                    break;
-                }
-            }
-        }
-
-        // Fallback: if amount still not found or it picked the total by mistake
-        if (!data.totalAmount) {
-            const allAmounts = digitFocusText.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/g);
-            if (allAmounts) {
-                const vals = allAmounts.map(v => cleanAmount(v)).filter(v => v > 10);
-                if (vals.length > 0) {
-                    data.totalAmount = Math.min(...vals); // The net amount is usually the smaller one compared to T.AMOUNT
-                }
+        const allAmounts = digitFocusText.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/g);
+        if (allAmounts) {
+            const vals = allAmounts.map(v => cleanAmount(v)).filter(v => v > 10);
+            if (vals.length > 0) {
+                // Return the smallest decimal found (Net Amount vs Fees/Total)
+                data.totalAmount = Math.min(...vals);
             }
         }
 
         // 4. BATCH: Exactly 6 digits
-        const batchMatch = digitFocusText.match(/(?:BATCH)[\s\S]{0,15}?(\d{6})\b/i);
+        // Look for BATCH label then find the first 6-digit sequence near it
+        const batchMatch = digitFocusText.match(/BATCH[\s\S]{0,20}?(\d{6})/i);
         if (batchMatch) data.batchNumber = batchMatch[1];
 
         // 5. APPROVAL CODE
-        const authMatch = digitFocusText.match(/(?:AUTH|APPR|APPROVAL|الموافقة)[\s\S]{0,15}?(\d{6})/i);
+        const authMatch = digitFocusText.match(/(?:AUTH|APPR|APPROVAL)[\s\S]{1,15}?(\d{6})/i);
         if (authMatch) data.approvalNumber = authMatch[1];
 
         // 6. RECEIPT # / INVOICE
-        const receiptMatch = digitFocusText.match(/(?:RECEIPT\s*#|الايصال)[\s\.:]*(\d+)/i);
+        const receiptMatch = digitFocusText.match(/(?:RECEIPT|ECEIP)[\s\S]{0,10}?(\d+)/i);
         if (receiptMatch) data.invoiceNumber = receiptMatch[1];
 
-        // 7. CARD LAST 4 (Robust search for stars/dots then 4 digits)
-        const cardMatch = digitFocusText.match(/[\*xX\s\-\.]{5,}(\d{4})\b/);
-        if (cardMatch) {
-            data.last4Digits = cardMatch[1];
-            // Try to find BIN if present before stars
-            const binMatch = digitFocusText.match(/\b(\d{6})[\*xX\s\-\.]{4,}/);
-            data.cardBin = binMatch ? binMatch[1] : '******';
+        // 7. CARD LAST 4 (Robust: look for digits after Sale or in lines with letters/signs)
+        // Matches: ************9009 or G09 (as G sometimes = 9)
+        const lines = cleanText.split('\n');
+        let saleFound = false;
+        for (const line of lines) {
+            if (line.toUpperCase().includes('SALE')) {
+                saleFound = true;
+                continue;
+            }
+            if (saleFound) {
+                // The line after Sale usually has the card number
+                const last4Match = line.replace(/\s/g, '').match(/(\d{4})\b/);
+                if (last4Match) {
+                    data.last4Digits = last4Match[1];
+                    data.cardBin = '******';
+                    break;
+                }
+                // Fallback: If OCR distorted digits into letters (like G=9)
+                const distortedMatch = line.match(/([A-Z0-9]{4})\b$/);
+                if (distortedMatch) {
+                    let raw = distortedMatch[1].replace(/G/g, '9').replace(/S/g, '5').replace(/O/g, '0');
+                    if (/^\d{4}$/.test(raw)) {
+                        data.last4Digits = raw;
+                        data.cardBin = '******';
+                        break;
+                    }
+                }
+            }
         }
 
         // 8. MERCHANT (MID) 
-        const midMatch = digitFocusText.match(/(?:MID|MERCHANT|التاجر)[\s\.:#]*(\d{10,15})/i);
+        const midMatch = digitFocusText.match(/(?:MID|MIC|MERCHANT)[\s\.:#]*(\d{10,15})/i);
         if (midMatch) data.merchantCode = midMatch[1];
 
         return data;
