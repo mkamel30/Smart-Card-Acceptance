@@ -179,13 +179,16 @@ export class OCRService {
 
     private parseReceiptText(text: string): ExtractedReceiptData {
         const data: ExtractedReceiptData = {};
-        const cleanText = text.replace(/[\r\n]+/g, '\n');
+        // Normalize text: fix common OCR mistakes in Arabic/English symbols
+        const cleanText = text.replace(/[\r\n]+/g, '\n').replace(/[I|l]/g, '1');
 
         // Create a version of text without spaces between digits for more robust matching
-        // "1 2 3 . 4 5" -> "123.45"
+        // Improves "1 , 3 3 4 . 2 1" -> "1,334.21"
         const digitFocusText = cleanText.replace(/(\d)\s+(?=\d|[.,]\d)/g, '$1');
 
-        // 1. DATES (DD/MM/YYYY or YYYY-MM-DD)
+        console.log('--- OCR Parsing Debug ---');
+
+        // 1. DATES (DD/MM/YYYY)
         const datePattern = /\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\b/g;
         const dateMatches = digitFocusText.match(datePattern);
         if (dateMatches) {
@@ -193,94 +196,64 @@ export class OCRService {
             const parts = bestDate.split(/[/\-\.]/);
             if (parts[2].length === 4) {
                 data.date = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            } else if (parts[0].length === 4) {
-                data.date = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
             } else {
                 data.date = `20${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
             }
         }
 
-        // 2. TIME (HH:MM[:SS])
+        // 2. TIME
         const timePattern = /\b(\d{1,2}:\d{2}(?::\d{2})?)\b/;
         const timeMatch = cleanText.match(timePattern);
         if (timeMatch) data.time = timeMatch[1];
 
-        // 3. AMOUNT with Enhanced Egyptian Currency Recognition
+        // 3. AMOUNT - Specialized for EGP/LE patterns
+        // Matches: T.AMOUNT EGP 1,334.21 or TOTAL: 1234.00 LE
         const amountPatterns = [
-            // English patterns
-            /(?:Total|Amount|Sale|Net)\s*[:\.]?\s*(\d+[.,]\d{2})/i,
-            /(\d+[.,]\d{2})\s*(?:EGP|LE|L\.E|ج\.م|ج\.m)/i,
-            /(?:EGP|LE|L\.E|ج\.م|ج\.m)\s*(\d+[.,]\d{2})/i,
-            // Arabic patterns with enhanced recognition
-            /(?:المبلغ|الإجمالي|الصافي|السعر)\s*[:\.]?\s*(\d+[.,]\d{2})/i,
-            /(\d+[.,]\d{2})\s*(?:جنيه|مصري|مصر)/i,
-            /(?:جنيه|مصري|مصر)\s*(\d+[.,]\d{2})/i
+            /(?:T\.AMOUNT|TOTAL AMOUNT|TOTAL|SALE|المبلغ الشامل|الإجمالي)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,]+\.\d{2})/i,
+            /(?:AMOUNT|SALE|المبلغ)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,]+\.\d{2})/i,
+            /([\d,]+\.\d{2})\s*(?:EGP|LE|L\.E|ج\.م|جنيه)/i
         ];
 
         for (const pat of amountPatterns) {
             const m = digitFocusText.match(pat);
             if (m) {
-                data.totalAmount = parseFloat(m[1].replace(/,/g, ''));
-                break;
-            }
-        }
-
-        // 4. MERCHANT ID (MID) - Enhanced for Egyptian Banking (8-20 digits)
-        const midPatterns = [
-            // English patterns
-            /(?:MID|Merchant|Merch|ID)\s*[:\.]?\s*(\d{8,20})/i,
-            /Merchant\s*ID\s*[:\.]?\s*(\d{8,20})/i,
-            /MID\s*[:\.]?\s*(\d{8,20})/i,
-            // Arabic patterns
-            /(?:التاجر|كود التاجر|المerchant)\s*[:\.]?\s*(\d{8,20})/i,
-            /(?:كود|ID)\s*[:\.]?\s*(\d{8,20})\s*(?:التاجر|Merchant)/i
-        ];
-
-        let midFound = false;
-        for (const pat of midPatterns) {
-            const m = digitFocusText.match(pat);
-            if (m) {
-                data.merchantCode = m[1];
-                midFound = true;
-                break;
-            }
-        }
-
-        if (!midFound) {
-            // Standalone fallback: look for long numbers (8-20 digits)
-            const standaloneMID = digitFocusText.match(/\b(\d{8,20})\b/);
-            if (standaloneMID) {
-                // Filter out obvious dates, phone numbers, etc.
-                const candidate = standaloneMID[1];
-                if (!this.looksLikeDateOrPhone(candidate)) {
-                    data.merchantCode = candidate;
+                const rawAmount = m[1].replace(/,/g, '');
+                const val = parseFloat(rawAmount);
+                if (!isNaN(val) && val > 0) {
+                    data.totalAmount = val;
+                    console.log('Found Amount:', val);
+                    break;
                 }
             }
         }
 
-        // 5. TERMINAL ID (TID) - Enhanced Egyptian patterns
-        const tidPatterns = [
-            /(?:TID|Terminal|Term|طرفية)\s*[:\.]?\s*(\d{6,10})/i,
-            /Terminal\s*ID\s*[:\.]?\s*(\d{6,10})/i,
-            /(?:طرفية|Terminal)\s*(?:ID)?\s*[:\.]?\s*(\d{6,10})/i
+        // 4. MERCHANT ID (MID) - 8 to 15 digits
+        const midPatterns = [
+            /(?:MID|MERCHANT|التاجر|كود التاجر)[:\.\s]*(\d{8,15})/i,
+            /\b(\d{10,15})\b/ // Standalone long sequence
         ];
 
-        for (const pat of tidPatterns) {
+        for (const pat of midPatterns) {
             const m = digitFocusText.match(pat);
             if (m) {
-                data.terminalId = m[1];
+                data.merchantCode = m[1];
+                console.log('Found MID:', m[1]);
                 break;
             }
         }
 
-        // 6. APPROVAL / AUTH CODE - Enhanced to support 4-8 digits (realistic range)
-        const authPatterns = [
-            /(?:Approval|Appr|Auth|Code|الموافقة|تأكيد)\s*(?:CODE|NO|رقم)?\s*[:\.]?\s*(\d{4,8})/i,
-            /\b(\d{4,8})\s*(?:AUTH|APPR|CODE|الموافقة)/i,
-            /(?:AUTH|APPR|CODE)\s*[:\.]?\s*(\d{4,8})/i,
-            /(?:تأكيد|الموافقة)\s*[:\.]?\s*(\d{4,8})/i
+        // 5. TERMINAL ID (TID)
+        const tidPatterns = [
+            /(?:TID|TERMINAL|الطرفية)[:\.\s]*(\d{8})/i
         ];
+        const tidMatch = digitFocusText.match(tidPatterns[0]);
+        if (tidMatch) data.terminalId = tidMatch[1];
 
+        // 6. APPROVAL / AUTH CODE - Exactly 6 digits usually
+        const authPatterns = [
+            /(?:AUTH CODE|APPR CODE|APPROVAL|الموافقة)[:\.\s]*(\d{6})/i,
+            /CODE[:\s]*(\d{6})/i
+        ];
         for (const pat of authPatterns) {
             const m = digitFocusText.match(pat);
             if (m) {
@@ -289,92 +262,31 @@ export class OCRService {
             }
         }
 
-        if (!data.approvalNumber) {
-            // Fallback: find standalone 4-8 digit numbers
-            const standaloneAuth = digitFocusText.match(/\b(\d{4,8})\b/g);
-            if (standaloneAuth) {
-                // Prefer 6-digit codes, then 4-8 digit codes
-                const sixDigitCodes = standaloneAuth.filter(code => code.length === 6);
-                if (sixDigitCodes.length > 0) {
-                    data.approvalNumber = sixDigitCodes[0];
-                } else {
-                    data.approvalNumber = standaloneAuth[0];
-                }
-            }
-        }
-
-        // 7. BATCH - Enhanced for flexible numbering
+        // 7. BATCH - Handle leading zeros and common labels
         const batchPatterns = [
-            /(?:Batch|الباتش|رقم الباتش|الدفعة)\s*(?:NO|#)?\s*[:\.]?\s*(\d{1,10})/i,
-            /(?:BATCH|BAT)\s*[:\.]?\s*(\d{1,10})/i
+            /(?:BATCH NO|BATCH|الباتش)[:\.\s]*(\d+)/i
         ];
-
-        for (const pat of batchPatterns) {
-            const m = digitFocusText.match(pat);
-            if (m) {
-                data.batchNumber = m[1];
-                break;
-            }
+        const batchMatch = digitFocusText.match(batchPatterns[0]);
+        if (batchMatch) {
+            // Keep full string to preserve leading zeros if helpful, or convert to int
+            data.batchNumber = batchMatch[1].replace(/^0+/, '') || '0';
+            if (data.batchNumber === '0' && batchMatch[1].length > 1) data.batchNumber = batchMatch[1]; // handle "0000" cases
+            console.log('Found Batch:', batchMatch[1]);
         }
 
-        // 8. CARD NUMBERS (BIN & LAST 4) - Enhanced for Egyptian cards
-        const cardPatterns = [
-            /(?:Card|Card No|PAN|المسلسل|البطاقة)\s*[:\.]?\s*(\d{4})[\*xX\.\-\s]{1,12}(\d{4})\b/i,
-            /(?:[\*xX\.\-\s]{4,}|Card|Card No|PAN|البطاقة)\s*[:\.]?\s*\d*(\d{4})\b/i
-        ];
-
-        for (const pat of cardPatterns) {
-            const m = digitFocusText.match(pat);
-            if (m) {
-                if (m[2]) data.last4Digits = m[2];
-                break;
-            }
+        // 8. CARD LAST 4 - Handle patterns like ************9009
+        const cardMatch = digitFocusText.match(/[\*xX\s]{4,}(\d{4})\b/);
+        if (cardMatch) {
+            data.last4Digits = cardMatch[1];
+            console.log('Found Last4:', cardMatch[1]);
         }
 
-        // BIN (First 6 digits) - Enhanced for Egyptian banks
-        const binPatterns = [
-            /\b(4\d{5}|5\d{5})\b/, // Starts with 4 or 5
-            /\b(4897\d{2})\b/, // Common Egyptian bank prefix
-            /\b(\d{6})[\*xX\s]{6,10}(\d{4})\b/ // Full masked card
-        ];
-
-        for (const pat of binPatterns) {
-            const m = digitFocusText.match(pat);
-            if (m) {
-                data.cardBin = m[1];
-                if (m[2]) data.last4Digits = m[2];
-                break;
-            }
-        }
-
-        if (!data.last4Digits) {
-            // Fallback for last 4 digits
-            const last4Patterns = [
-                /\b(\d{4})\s*$/, // End of line
-                /\b(\d{4})\s*(?:END|FINISH|نهاية)/i
-            ];
-            for (const pat of last4Patterns) {
-                const m = digitFocusText.match(pat);
-                if (m) {
-                    data.last4Digits = m[1];
-                    break;
-                }
-            }
-        }
-
-        // 9. RRN (Retrieval Reference Number) - Enhanced
-        const rrnPatterns = [
-            /(?:RRN|Ref|Reference|رقم المرجع)\s*[:\.]?\s*(\d{12})/i,
-            /\b(\d{12})\s*(?:RRN|REF|REFERENCE)/i,
-            /(?:المرجع|Reference)\s*[:\.]?\s*(\d{12})/i
-        ];
-
-        for (const pat of rrnPatterns) {
-            const m = digitFocusText.match(pat);
-            if (m) {
-                data.rrn = m[1];
-                break;
-            }
+        // 9. SERVICE CATEGORY DETECTION
+        const lowerText = text.toUpperCase();
+        if (lowerText.includes('SMART') || lowerText.includes('سمارت')) {
+            (data as any).serviceCategory = 'SMART';
+        } else if (lowerText.includes('TAMWEEN') || lowerText.includes('تموين')) {
+            (data as any).serviceCategory = 'TAMWEEN';
         }
 
         return data;
