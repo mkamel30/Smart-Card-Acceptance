@@ -298,17 +298,7 @@ export class OCRService {
     }
 
     // Helper function to filter out obvious dates and phone numbers
-    private looksLikeDateOrPhone(number: string): boolean {
-        // Check if it looks like a date (DDMMYYYY, MMDDYYYY, etc.)
-        if (/^(0[1-9]|[12][0-9]|3[01])(0[1-9]|[12][0-9])\d{4}$/.test(number)) return true;
-        if (/^(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])\d{4}$/.test(number)) return true;
 
-        // Check if it looks like an Egyptian phone number
-        if (/^01[0125]\d{8}$/.test(number)) return true; // Mobile
-        if (/^0[2-9]\d{8,9}$/.test(number)) return true; // Landline
-
-        return false;
-    }
 }
 
 export default new OCRService();
