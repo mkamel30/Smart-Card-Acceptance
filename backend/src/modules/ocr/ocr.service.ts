@@ -179,16 +179,15 @@ export class OCRService {
 
     private parseReceiptText(text: string): ExtractedReceiptData {
         const data: ExtractedReceiptData = {};
-        // Normalize text: fix common OCR mistakes in Arabic/English symbols
+        // Normalize text: fix common OCR mistakes
         const cleanText = text.replace(/[\r\n]+/g, '\n').replace(/[I|l]/g, '1');
 
-        // Create a version of text without spaces between digits for more robust matching
-        // Improves "1 , 3 3 4 . 2 1" -> "1,334.21"
+        // Create digit-only optimized text for amounts/IDs
         const digitFocusText = cleanText.replace(/(\d)\s+(?=\d|[.,]\d)/g, '$1');
 
-        console.log('--- OCR Parsing Debug ---');
+        console.log('--- OCR Parsing (Refined) ---');
 
-        // 1. DATES (DD/MM/YYYY)
+        // 1. DATES
         const datePattern = /\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\b/g;
         const dateMatches = digitFocusText.match(datePattern);
         if (dateMatches) {
@@ -206,8 +205,7 @@ export class OCRService {
         const timeMatch = cleanText.match(timePattern);
         if (timeMatch) data.time = timeMatch[1];
 
-        // 3. AMOUNT - Specialized for EGP/LE patterns
-        // Matches: T.AMOUNT EGP 1,334.21 or TOTAL: 1234.00 LE
+        // 3. AMOUNT - Robust Extraction
         const amountPatterns = [
             /(?:T\.AMOUNT|TOTAL AMOUNT|TOTAL|SALE|المبلغ الشامل|الإجمالي)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,]+\.\d{2})/i,
             /(?:AMOUNT|SALE|المبلغ)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,]+\.\d{2})/i,
@@ -221,23 +219,22 @@ export class OCRService {
                 const val = parseFloat(rawAmount);
                 if (!isNaN(val) && val > 0) {
                     data.totalAmount = val;
-                    console.log('Found Amount:', val);
                     break;
                 }
             }
         }
 
-        // 4. MERCHANT ID (MID) - 8 to 15 digits
+        // 4. MERCHANT ID (Machine MID) - Save to merchantCode for now or terminalId
         const midPatterns = [
             /(?:MID|MERCHANT|التاجر|كود التاجر)[:\.\s]*(\d{8,15})/i,
-            /\b(\d{10,15})\b/ // Standalone long sequence
+            /\b(\d{10,15})\b/
         ];
 
         for (const pat of midPatterns) {
             const m = digitFocusText.match(pat);
             if (m) {
+                // This is the machine-specific MID from the receipt
                 data.merchantCode = m[1];
-                console.log('Found MID:', m[1]);
                 break;
             }
         }
@@ -249,7 +246,7 @@ export class OCRService {
         const tidMatch = digitFocusText.match(tidPatterns[0]);
         if (tidMatch) data.terminalId = tidMatch[1];
 
-        // 6. APPROVAL / AUTH CODE - Exactly 6 digits usually
+        // 6. APPROVAL / AUTH CODE
         const authPatterns = [
             /(?:AUTH CODE|APPR CODE|APPROVAL|الموافقة)[:\.\s]*(\d{6})/i,
             /CODE[:\s]*(\d{6})/i
@@ -262,32 +259,40 @@ export class OCRService {
             }
         }
 
-        // 7. BATCH - Handle leading zeros and common labels
+        // 7. BATCH - Preserve leading zeros (000010)
         const batchPatterns = [
             /(?:BATCH NO|BATCH|الباتش)[:\.\s]*(\d+)/i
         ];
         const batchMatch = digitFocusText.match(batchPatterns[0]);
         if (batchMatch) {
-            // Keep full string to preserve leading zeros if helpful, or convert to int
-            data.batchNumber = batchMatch[1].replace(/^0+/, '') || '0';
-            if (data.batchNumber === '0' && batchMatch[1].length > 1) data.batchNumber = batchMatch[1]; // handle "0000" cases
-            console.log('Found Batch:', batchMatch[1]);
+            // Keep exactly as found in receipt
+            data.batchNumber = batchMatch[1];
         }
 
-        // 8. CARD LAST 4 - Handle patterns like ************9009
-        const cardMatch = digitFocusText.match(/[\*xX\s]{4,}(\d{4})\b/);
-        if (cardMatch) {
-            data.last4Digits = cardMatch[1];
-            console.log('Found Last4:', cardMatch[1]);
+        // 8. CARD BIN (6) & LAST 4
+        // Logic for patterns like: 412345******9009 or ************9009
+        const fullCardMatch = digitFocusText.match(/(\d{0,6})[\*xX\s]{4,}(\d{4})\b/);
+        if (fullCardMatch) {
+            const prefix = fullCardMatch[1];
+            const last4 = fullCardMatch[2];
+
+            // If prefix is less than 6 digits, fill with stars/remain empty as per user request
+            if (prefix.length === 6) {
+                data.cardBin = prefix;
+            } else {
+                // Return the mask if digits not found (e.g. "******")
+                data.cardBin = prefix.padEnd(6, '*');
+            }
+            data.last4Digits = last4;
         }
 
-        // 9. SERVICE CATEGORY DETECTION
+        // 9. SERVICE CATEGORY Detection (DISABLED - User fills manually)
+        /* 
         const lowerText = text.toUpperCase();
         if (lowerText.includes('SMART') || lowerText.includes('سمارت')) {
-            (data as any).serviceCategory = 'SMART';
-        } else if (lowerText.includes('TAMWEEN') || lowerText.includes('تموين')) {
-            (data as any).serviceCategory = 'TAMWEEN';
-        }
+             (data as any).serviceCategory = 'SMART';
+        } 
+        */
 
         return data;
     }
