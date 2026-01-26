@@ -152,8 +152,9 @@ export default function SettlementWorkFlow() {
     };
 
     const handleEmailPDF = (batch: BatchGroup) => {
-        const subject = `تقرير تسوية - باتش رقم ${batch.batchNumber}`;
-        const body = `السادة المعنيين،\n\nيرجى العلم بأنه تم الانتهاء من تسوية الباتش رقم ${batch.batchNumber} بتاريخ ${new Date(batch.settlementDate).toLocaleDateString('ar-EG')}.\n\nملخص:\n- عدد المعاملات: ${batch.transactions.length}\n- إجمالي المبلغ: ${batch.totalAmount.toLocaleString()} ج.م\n\nمرفق طيه ملف الـ Excel الخاص بالتسوية (برجاء تحميله ثم إرفاقه).\n\nمع تحيات،\nنظام تسوية شركة سمارت`;
+        const merchantCode = batch.transactions[0]?.merchantCode || '';
+        const subject = `تسوية فروق تصنيع_${merchantCode}`;
+        const body = `السادة الزملاء،\n\nيرجى العلم ببيانات التسوية التالية:\n\nالتاريخ: ${new Date(batch.settlementDate).toLocaleDateString('ar-EG')}\nكود التاجر: ${merchantCode}\nالمبلغ الصافي: ${(batch as any).totalNet?.toLocaleString() || batch.totalAmount.toLocaleString()} ج.م\nالباتش: ${batch.batchNumber} / الموافقة: ${batch.transactions[0]?.approvalNumber || ''}\n\nمع التحية.`;
 
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     };

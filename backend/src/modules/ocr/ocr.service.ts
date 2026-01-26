@@ -50,7 +50,8 @@ export class OCRService {
         return urlData.data.publicUrl;
     }
 
-    async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string; engine: string }> {
+    async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string; engine: string; imageUrl?: string }> {
+        const imageUrl = await this.uploadImage(file);
         let text = '';
         const engine = 'Tesseract (Precision-v3)';
 
@@ -87,13 +88,16 @@ export class OCRService {
 
         } catch (e: any) {
             console.error('OCR Process Failure:', e.message);
-            return { data: {}, rawText: '', engine: 'Failed' };
+            return { data: {}, rawText: '', engine: 'Failed', imageUrl };
         }
 
+        const parsedData = this.parseReceiptText(text);
+
         return {
-            data: this.parseReceiptText(text),
+            data: parsedData,
             rawText: text,
-            engine
+            engine,
+            imageUrl
         };
     }
 

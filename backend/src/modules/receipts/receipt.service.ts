@@ -20,7 +20,7 @@ export class ReceiptService {
                 const ocrResult = await ocrService.extractAndParse(file);
                 text = ocrResult.rawText;
                 extractedData = ocrResult.data;
-                imageUrl = extractedData.imageUrl || '';
+                imageUrl = ocrResult.imageUrl || ''; // Get the URL from the outer result
             }
 
             const receipt = await prisma.receipt.upsert({
