@@ -99,15 +99,15 @@ export class OCRService {
         let text = '';
         let usedEngine = 'unknown';
 
-        // --- Step A: Try OCR.space (Direct Buffer Upload) ---
+        // --- Step A: Try OCR.space (Primary Engine) ---
+        // Using URL method with OCREngine 2 for better stability on Render
         const OCR_SPACE_KEY = process.env.OCR_SPACE_API_KEY || "K82676068988957";
 
-        if (OCR_SPACE_KEY) {
+        if (OCR_SPACE_KEY && publicUrl) {
             try {
-                console.log('OCR Step 5: Calling OCR.space (Binary Buffer)...');
+                console.log('OCR Step 5: Calling OCR.space (URL Method)...');
                 const osFormData = new FormData();
-                // Pass the processed buffer directly
-                osFormData.append('file', ocrBuffer, { filename: 'receipt.png', contentType: 'image/png' });
+                osFormData.append('url', publicUrl);
                 osFormData.append('language', 'ara');
                 osFormData.append('OCREngine', '2');
                 osFormData.append('scale', 'true');
@@ -121,7 +121,7 @@ export class OCRService {
                     text = osResponse.data.ParsedResults[0].ParsedText;
                     usedEngine = 'OCR.space (Primary)';
                 } else {
-                    console.warn('OCR.space responded but no text. Code:', osResponse.data?.OCRExitCode);
+                    console.warn('OCR.space 2 responded but no text. Code:', osResponse.data?.OCRExitCode);
                 }
             } catch (err: any) {
                 console.warn('OCR.space Error:', err.message);
@@ -187,19 +187,25 @@ export class OCRService {
         const timeMatch = cleanText.match(timePattern);
         if (timeMatch) data.time = timeMatch[1];
 
-        // 3. AMOUNT - Robust Extraction
+        // 3. AMOUNT - Deep Scan
+        // This regex looks for digits possibly separated by commas, followed by a dot and exactly 2 decimals
         const amountPatterns = [
-            /(?:T\.AMOUNT|TOTAL AMOUNT|TOTAL|SALE|المبلغ الشامل|الإجمالي)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,]+\.\d{2})/i,
-            /(?:AMOUNT|SALE|المبلغ)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,]+\.\d{2})/i,
-            /([\d,]+\.\d{2})\s*(?:EGP|LE|L\.E|ج\.م|جنيه)/i
+            /(?:T\.AMOUNT|TOTAL AMOUNT|TOTAL|SALE|المبلغ الشامل|الإجمالي)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,]+\.?\s?\d{2})/i,
+            /(?:AMOUNT|SALE|المبلغ)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,]+\.?\s?\d{2})/i,
+            /([\d,]+\.?\s?\d{2})\s*(?:EGP|LE|L\.E|ج\.م|جنيه)/i
         ];
 
         for (const pat of amountPatterns) {
             const m = digitFocusText.match(pat);
             if (m) {
-                const rawAmount = m[1].replace(/,/g, '');
-                const val = parseFloat(rawAmount);
-                if (!isNaN(val) && val > 0) {
+                // Clean the amount: remove everything except digits and the LAST dot
+                let raw = m[1].replace(/\s/g, '').replace(/,/g, '');
+                // Handle cases where the dot is missing but we have 2 decimals at the end
+                if (!raw.includes('.') && raw.length > 2) {
+                    raw = raw.slice(0, -2) + '.' + raw.slice(-2);
+                }
+                const val = parseFloat(raw);
+                if (!isNaN(val) && val > 1) { // Avoid tiny false positives
                     data.totalAmount = val;
                     break;
                 }
@@ -243,7 +249,7 @@ export class OCRService {
 
         // 7. BATCH - Preserve leading zeros (000010)
         const batchPatterns = [
-            /(?:BATCH NO|BATCH|الباتش)[:\.\s]*(\d+)/i
+            /(?:BATCH NO|BATCH|الباتش)[:\.\s#]*(\d+)/i
         ];
         const batchMatch = digitFocusText.match(batchPatterns[0]);
         if (batchMatch) {
@@ -253,7 +259,7 @@ export class OCRService {
 
         // 8. CARD BIN (6) & LAST 4
         // Logic for patterns like: 412345******9009 or ************9009
-        const fullCardMatch = digitFocusText.match(/(\d{0,6})[\*xX\s]{4,}(\d{4})\b/);
+        const fullCardMatch = digitFocusText.match(/(\d{0,6})[\*xX\s\-\.]{4,}(\d{4})\b/);
         if (fullCardMatch) {
             const prefix = fullCardMatch[1];
             const last4 = fullCardMatch[2];
