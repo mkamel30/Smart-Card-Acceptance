@@ -54,6 +54,8 @@ export class OCRService {
     }
 
     async extractAndParse(file: Express.Multer.File): Promise<{ data: ExtractedReceiptData; rawText: string; engine: string }> {
+        let ocrBuffer: Buffer = file.buffer;
+        let storageBuffer: Buffer = file.buffer;
 
         try {
             console.log('OCR Step 1: Starting image processing with Sharp...');
@@ -106,7 +108,7 @@ export class OCRService {
                 const osFormData = new FormData();
                 // Pass the processed buffer directly
                 osFormData.append('file', ocrBuffer, { filename: 'receipt.png', contentType: 'image/png' });
-                osFormData.append('language', 'eng+ara');
+                osFormData.append('language', 'ara');
                 osFormData.append('OCREngine', '2');
                 osFormData.append('scale', 'true');
 
