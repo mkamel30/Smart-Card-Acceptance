@@ -26,6 +26,7 @@ export class ExportService {
             { header: 'المبلغ المسدد', key: 'settledAmount', width: 15 },
             { header: 'رقم الموافقة', key: 'approvalNumber', width: 15 },
             { header: 'رقم الباتش', key: 'batchNumber', width: 15 },
+            { header: 'أول 6 أرقام (BIN)', key: 'cardBin', width: 15 },
             { header: 'آخر 4 أرقام', key: 'last4Digits', width: 15 },
         ];
 
@@ -39,6 +40,7 @@ export class ExportService {
                 settledAmount: Number(s.settledAmount),
                 approvalNumber: s.approvalNumber || '',
                 batchNumber: s.batchNumber || '',
+                cardBin: s.cardBin || '',
                 last4Digits: s.last4Digits || '',
             });
         });
@@ -129,7 +131,7 @@ export class ExportService {
         sheet.getCell('F3').numFmt = '#,##0.00 "ج.م"';
 
         // Table Header
-        const headers = ['م', 'كود التاجر', 'اسم التاجر', 'نوع الخدمة', 'رقم الموافقة', 'المبلغ'];
+        const headers = ['م', 'كود التاجر', 'اسم التاجر', 'أول 6 أرقام (BIN)', 'آخر 4 أرقام', 'رقم الموافقة', 'المبلغ الصافي'];
         const headerRow = sheet.getRow(6);
         headers.forEach((h, i) => {
             const cell = headerRow.getCell(i + 1);
@@ -145,10 +147,11 @@ export class ExportService {
             row.getCell(1).value = i + 1;
             row.getCell(2).value = t.merchantCode || '';
             row.getCell(3).value = t.merchantName || t.receipt?.merchantName || '';
-            row.getCell(4).value = t.subService || '';
-            row.getCell(5).value = t.approvalNumber || '';
-            row.getCell(6).value = Number(t.settledAmount);
-            row.getCell(6).numFmt = '#,##0.00';
+            row.getCell(4).value = t.cardBin || '';
+            row.getCell(5).value = t.last4Digits || '';
+            row.getCell(6).value = t.approvalNumber || '';
+            row.getCell(7).value = Number(t.settledAmount);
+            row.getCell(7).numFmt = '#,##0.00';
 
             row.eachCell((cell) => {
                 cell.alignment = { horizontal: 'center' };
@@ -163,7 +166,7 @@ export class ExportService {
 
         // Column widths
         sheet.columns = [
-            { width: 5 }, { width: 15 }, { width: 30 }, { width: 20 }, { width: 15 }, { width: 15 }
+            { width: 5 }, { width: 15 }, { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 20 }
         ];
 
         return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;

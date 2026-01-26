@@ -128,21 +128,20 @@ export class PDFService {
         doc.fillColor('#1e40af').fontSize(10);
 
         // Columns (RTL: Start from Right)
-        // # | Merchant Code | Merchant Name | Service | Approval | Amount
-
+        // # | Merchant Code | Merchant Name | Card Info | Approval | Amount
         const colAmount = 50;   // Leftmost
         const colApprov = 120;
-        const colService = 200;
-        const colName = 320;
+        const colCard = 190;
+        const colName = 290;
         const colCode = 450;
         const colHash = 520;    // Rightmost
 
         doc.text(this.processArabic('م'), colHash, tableTop, { width: 20, align: 'center' });
         doc.text(this.processArabic('كود التاجر'), colCode, tableTop, { width: 60, align: 'right' });
-        doc.text(this.processArabic('اسم التاجر'), colName, tableTop, { width: 120, align: 'right' });
-        doc.text(this.processArabic('نوع الخدمة'), colService, tableTop, { width: 110, align: 'right' });
-        doc.text(this.processArabic('الموافقة'), colApprov, tableTop, { width: 70, align: 'right' });
-        doc.text(this.processArabic('المبلغ'), colAmount, tableTop, { width: 60, align: 'right' });
+        doc.text(this.processArabic('اسم التاجر'), colName, tableTop, { width: 150, align: 'right' });
+        doc.text(this.processArabic('بيانات الكارت'), colCard, tableTop, { width: 90, align: 'right' });
+        doc.text(this.processArabic('الموافقة'), colApprov, tableTop, { width: 60, align: 'right' });
+        doc.text(this.processArabic('المبلغ الصافي'), colAmount, tableTop, { width: 65, align: 'right' });
 
         doc.moveTo(50, tableTop + 15).lineTo(545, tableTop + 15).strokeColor('#1e40af').stroke();
 
@@ -158,12 +157,14 @@ export class PDFService {
             if (i % 2 === 0) doc.rect(50, y - 5, 495, 20).fillColor('#f9fafb').fill();
             doc.fillColor('#374151');
 
+            const cardInfo = `${t.cardBin || '******'} **** ${t.last4Digits || '0000'}`;
+
             doc.text(String(i + 1), colHash, y, { width: 20, align: 'center' });
             doc.text(t.merchantCode || '-', colCode, y, { width: 60, align: 'right' });
-            doc.text(this.processArabic(t.merchantName || '-'), colName, y, { width: 120, align: 'right' });
-            doc.text(this.processArabic((t.subService || '-').substring(0, 25)), colService, y, { width: 110, align: 'right' });
-            doc.text(t.approvalNumber || '-', colApprov, y, { width: 70, align: 'right' });
-            doc.text(Number(t.settledAmount).toLocaleString(), colAmount, y, { width: 60, align: 'right' });
+            doc.text(this.processArabic(t.merchantName || '-'), colName, y, { width: 150, align: 'right' });
+            doc.text(cardInfo, colCard, y, { width: 90, align: 'right' });
+            doc.text(t.approvalNumber || '-', colApprov, y, { width: 60, align: 'right' });
+            doc.text(Number(t.settledAmount).toLocaleString(), colAmount, y, { width: 65, align: 'right' });
 
             y += 20;
         });
