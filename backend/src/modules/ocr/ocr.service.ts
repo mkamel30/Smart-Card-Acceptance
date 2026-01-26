@@ -178,35 +178,46 @@ export class OCRService {
         }
     }
 
-    // Secondary regex-based fallback
-    if (!data.totalAmount) {
-        const m = digitFocusText.match(/(?:TOTAL|SALE|المبلغ|الشامل)[:\.\s]*([\d,]+\.\d{2})/i);
-        if (m) data.totalAmount = parseFloat(m[1].replace(/,/g, ''));
+    // 3. AMOUNT - Strict Label Matching
+    const amountPatterns = [
+        /(?:T\.AMOUNT|TOTAL AMOUNT|TOTAL|SALE|المبلغ الشامل|الإجمالي)\s*(?:EGP|LE|L\.E|ج\.م)?[:\.\s]*([\d,\s]+\.?\s?\d{2})/i,
+        /([\d,\s]+\.\d{2})\s*(?:EGP|LE|L\.E|ج\.م|جنيه)/i
+    ];
+
+    for (const pat of amountPatterns) {
+        const m = digitFocusText.match(pat);
+        if (m) {
+            // Extremely clean the number: remove spaces and commas, keep one dot
+            let raw = m[1].replace(/\s/g, '').replace(/,/g, '');
+            const val = parseFloat(raw);
+            if (!isNaN(val) && val > 0) {
+                data.totalAmount = val;
+                break;
+            }
+        }
     }
 
-    // 4. MERCHANT ID (Machine MID) - Save to merchantCode for now or terminalId
+    // 4. MERCHANT ID
     const midPatterns = [
         /(?:MID|MERCHANT|التاجر|كود التاجر)[:\.\s]*(\d{8,15})/i,
         /\b(\d{10,15})\b/
     ];
-
     for (const pat of midPatterns) {
         const m = digitFocusText.match(pat);
         if (m) {
-            // This is the machine-specific MID from the receipt
             data.merchantCode = m[1];
             break;
         }
     }
 
-    // 5. TERMINAL ID (TID)
+    // 5. TERMINAL ID
     const tidPatterns = [
         /(?:TID|TERMINAL|الطرفية)[:\.\s]*(\d{8})/i
     ];
     const tidMatch = digitFocusText.match(tidPatterns[0]);
     if (tidMatch) data.terminalId = tidMatch[1];
 
-    // 6. APPROVAL / AUTH CODE
+    // 6. APPROVAL CODE
     const authPatterns = [
         /(?:AUTH CODE|APPR CODE|APPROVAL|الموافقة)[:\.\s]*(\d{6})/i,
         /CODE[:\s]*(\d{6})/i
@@ -219,13 +230,12 @@ export class OCRService {
         }
     }
 
-    // 7. BATCH - Preserve leading zeros (000010)
+    // 7. BATCH - Strict digits including zeros
     const batchPatterns = [
         /(?:BATCH NO|BATCH|الباتش)[:\.\s#]*(\d+)/i
     ];
     const batchMatch = digitFocusText.match(batchPatterns[0]);
     if (batchMatch) {
-        // Keep exactly as found in receipt
         data.batchNumber = batchMatch[1];
     }
 
@@ -243,15 +253,15 @@ export class OCRService {
         data.last4Digits = last4;
     }
 
-    // 9. SERVICE CATEGORY Detection (DISABLED - User fills manually)
-    /* 
-    const lowerText = text.toUpperCase();
-    if (lowerText.includes('SMART') || lowerText.includes('سمارت')) {
-         (data as any).serviceCategory = 'SMART';
-    } 
+    // Special Fix: Correct common year mistakes (2076 -> 2026)
+    if (data.date && data.date.startsWith('2076')) {
+        data.date = data.date.replace('2076', '2026');
+    }
+    (data as any).serviceCategory = 'SMART';
+} 
     */
 
-    return data;
+return data;
 }
 
     // Helper function to filter out obvious dates and phone numbers
