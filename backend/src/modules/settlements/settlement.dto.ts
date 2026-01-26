@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const ServiceCategorySchema = z.enum(['SMART', 'TAMWEEN', 'TAM']); // Added TAM for consistency
 
 export const CreateSettlementSchema = z.object({
-    branchId: z.string().uuid().optional(),
+    branchId: z.string().optional(),
     settlementDate: z.string().or(z.date()).refine((val) => {
         const date = typeof val === 'string' ? new Date(val) : val;
         return !isNaN(date.getTime());
@@ -73,13 +73,13 @@ export const CreateSettlementSchema = z.object({
 });
 
 export const UpdateSettlementSchema = CreateSettlementSchema.partial().extend({
-    id: z.string().uuid('Invalid settlement ID')
+    id: z.string().min(1, 'Invalid settlement ID')
 });
 
 export const SettlementStatusSchema = z.enum(['PENDING', 'APPROVED', 'SETTLED', 'REJECTED', 'CANCELLED']);
 
 export const SettlementFilterSchema = z.object({
-    branchId: z.string().uuid().optional(),
+    branchId: z.string().optional(),
     status: SettlementStatusSchema.optional(),
     serviceCategory: ServiceCategorySchema.optional(),
     dateFrom: z.string().datetime().optional(),
@@ -105,7 +105,7 @@ export const CreateBranchSchema = z.object({
 });
 
 export const UpdateBranchSchema = CreateBranchSchema.partial().extend({
-    id: z.string().uuid('Invalid branch ID')
+    id: z.string().min(1, 'Invalid branch ID')
 });
 
 export const BranchFilterSchema = z.object({
@@ -143,11 +143,11 @@ export const CreateUserSchema = z.object({
         .max(100, 'Password cannot exceed 100 characters')
         .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one lowercase letter, one uppercase letter, and one digit'),
     role: z.enum(['ADMIN', 'BRANCH_MANAGER']).default('BRANCH_MANAGER'),
-    branchIds: z.array(z.string().uuid()).optional()
+    branchIds: z.array(z.string()).optional()
 });
 
 export const UpdateUserSchema = CreateUserSchema.partial().extend({
-    id: z.string().uuid('Invalid user ID')
+    id: z.string().min(1, 'Invalid user ID')
 });
 
 // Export validation
