@@ -1,7 +1,5 @@
 import Tesseract from 'tesseract.js';
 import sharp from 'sharp';
-import axios from 'axios';
-import FormData from 'form-data';
 import { supabase } from '../../config/supabase';
 
 export interface ExtractedReceiptData {
