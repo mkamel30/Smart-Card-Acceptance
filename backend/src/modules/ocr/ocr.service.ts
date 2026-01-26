@@ -198,14 +198,23 @@ export class OCRService {
         for (const pat of amountPatterns) {
             const m = digitFocusText.match(pat);
             if (m) {
-                // Clean the amount: remove everything except digits and the LAST dot
+                // Remove spaces and commas
                 let raw = m[1].replace(/\s/g, '').replace(/,/g, '');
-                // Handle cases where the dot is missing but we have 2 decimals at the end
+
+                // If there are multiple dots (e.g. 1.334.21), keep only the LAST one
+                if ((raw.match(/\./g) || []).length > 1) {
+                    const lastDotIndex = raw.lastIndexOf('.');
+                    raw = raw.replace(/\./g, '');
+                    raw = raw.slice(0, lastDotIndex) + '.' + raw.slice(lastDotIndex);
+                }
+
+                // If dot is missing but we have decimals
                 if (!raw.includes('.') && raw.length > 2) {
                     raw = raw.slice(0, -2) + '.' + raw.slice(-2);
                 }
+
                 const val = parseFloat(raw);
-                if (!isNaN(val) && val > 1) { // Avoid tiny false positives
+                if (!isNaN(val) && val > 1) {
                     data.totalAmount = val;
                     break;
                 }
@@ -258,18 +267,15 @@ export class OCRService {
         }
 
         // 8. CARD BIN (6) & LAST 4
-        // Logic for patterns like: 412345******9009 or ************9009
         const fullCardMatch = digitFocusText.match(/(\d{0,6})[\*xX\s\-\.]{4,}(\d{4})\b/);
         if (fullCardMatch) {
             const prefix = fullCardMatch[1];
             const last4 = fullCardMatch[2];
 
-            // If prefix is less than 6 digits, fill with stars/remain empty as per user request
-            if (prefix.length === 6) {
-                data.cardBin = prefix;
-            } else {
-                // Return the mask if digits not found (e.g. "******")
+            if (prefix && prefix.length >= 4) {
                 data.cardBin = prefix.padEnd(6, '*');
+            } else {
+                data.cardBin = '******';
             }
             data.last4Digits = last4;
         }
