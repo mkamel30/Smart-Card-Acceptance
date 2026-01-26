@@ -122,17 +122,27 @@ export class OCRService {
         const timeMatch = cleanText.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
         if (timeMatch) data.time = timeMatch[1];
 
-        // 3. AMOUNT (Prioritize base AMOUNT over T.AMOUNT for net value)
+        // 3. AMOUNT (Target base AMOUNT specifically, avoiding T.AMOUNT if possible)
         const cleanAmount = (str: string) => parseFloat(str.replace(/,/g, ''));
 
-        // Search for "AMOUNT" first (specifically avoiding T.AMOUNT if possible)
-        const baseAmountMatch = digitFocusText.match(/\bAMOUNT[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
-        const totalAmountMatch = digitFocusText.match(/(?:T\.AMOUNT|TOTAL|الإجمالي)[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
+        // Find all amount-like patterns
+        const lines = cleanText.split('\n');
+        let foundBaseAmount = false;
 
-        if (baseAmountMatch) {
-            data.totalAmount = cleanAmount(baseAmountMatch[1]);
-        } else if (totalAmountMatch) {
-            data.totalAmount = cleanAmount(totalAmountMatch[1]);
+        for (const line of lines) {
+            // Regex for a line that starts with AMOUNT (not T.AMOUNT)
+            const amtMatch = line.match(/^\s*AMOUNT[\s\S]{0,10}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
+            if (amtMatch && !line.toUpperCase().includes('T.AMOUNT')) {
+                data.totalAmount = cleanAmount(amtMatch[1]);
+                foundBaseAmount = true;
+                break;
+            }
+        }
+
+        // Fallback to previous logic if line-by-line failed
+        if (!foundBaseAmount) {
+            const totalAmountMatch = digitFocusText.match(/(?:T\.AMOUNT|TOTAL|الإجمالي)[\s\S]{0,15}?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
+            if (totalAmountMatch) data.totalAmount = cleanAmount(totalAmountMatch[1]);
         }
 
         // 4. BATCH: Exactly 6 digits
@@ -148,14 +158,15 @@ export class OCRService {
         if (receiptMatch) data.invoiceNumber = receiptMatch[1];
 
         // 7. CARD INFO (BIN & Last 4)
-        // Matches: 412345******9009 or ************9009 or **** 9009
-        const cardMatch = digitFocusText.match(/(\d{0,6})[\*xX\s\-]{4,}(\d{4})\b/);
+        // Matches: 412345******9009 or ************9009 or **** 9009 or .... 9009
+        // This regex is more inclusive of character misreads for mask
+        const cardMatch = digitFocusText.match(/(\d{0,6})[\*xX\s\-\.]{4,}(\d{4})\b/);
         if (cardMatch) {
             const prefix = cardMatch[1];
             const last4 = cardMatch[2];
 
-            data.cardBin = (prefix && prefix.length === 6) ? prefix : '******';
             data.last4Digits = last4;
+            data.cardBin = (prefix && prefix.length === 6) ? prefix : '******';
         }
 
         // 8. MERCHANT (MID) 
