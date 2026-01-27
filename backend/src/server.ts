@@ -10,6 +10,9 @@ import { prisma } from './config/database';
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Trust proxy for Render/Vercel (fixes X-Forwarded-For rate limit error)
+app.set('trust proxy', 1);
+
 // Rate limiting configuration
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes

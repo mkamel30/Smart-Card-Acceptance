@@ -133,7 +133,7 @@ export default function SettlementWorkFlow() {
         if (!confirm(`هل أنت متأكد من تسوية جميع معاملات الباتش ${batchNumber}؟`)) return;
         setSettling(batchNumber);
         try {
-            await api.post(`/settlements/batches/${batchNumber}/settle`);
+            await api.post(`/settlements/batches/${encodeURIComponent(batchNumber)}/settle`);
             alert(`تم تسوية الباتش ${batchNumber} بنجاح!`);
             fetchBatches();
         } catch (e) {
@@ -145,11 +145,11 @@ export default function SettlementWorkFlow() {
 
     const handleDownloadPDF = (batchNumber: string) => {
         // Open the HTML report page in a new tab
-        window.open(`/report/batch/${batchNumber}`, '_blank');
+        window.open(`/report/batch/${encodeURIComponent(batchNumber)}`, '_blank');
     };
 
     const handleDownloadExcel = (batchNumber: string) => {
-        window.open(`${api.defaults.baseURL}/exports/batch/${batchNumber}/excel`, '_blank');
+        window.open(`${api.defaults.baseURL}/exports/batch/${encodeURIComponent(batchNumber)}/excel`, '_blank');
     };
 
     const handleEmailPDF = (batch: BatchGroup) => {

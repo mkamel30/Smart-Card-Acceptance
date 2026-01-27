@@ -13,7 +13,7 @@ const getJwtSecret = (): string => {
 // Rate limiting specifically for admin operations
 const adminRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // limit each IP to 5 admin requests per windowMs
+    max: 50, // limit each IP to 50 admin requests per windowMs (prevent blocking legitimate admin work)
     message: 'Too many admin attempts, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,

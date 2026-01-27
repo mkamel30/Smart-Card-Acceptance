@@ -103,7 +103,7 @@ export default function BatchReport() {
                         <p className="text-xl font-bold text-gray-800">{batch.transactions.length}</p>
                     </div>
                     <div className="text-right border-r border-gray-200 pr-8">
-                        <p className="text-sm text-gray-500 mb-1">إجمالي المبلغ</p>
+                        <p className="text-sm text-gray-500 mb-1">صافي مبلغ الخدمة</p>
                         <p className="text-xl font-bold text-blue-600">
                             {(batch as any).totalAmount?.toLocaleString()} ج.م
                         </p>
@@ -115,7 +115,7 @@ export default function BatchReport() {
                         </p>
                     </div>
                     <div className="text-right border-r border-gray-200 pr-8">
-                        <p className="text-sm text-gray-500 mb-1">الصافي</p>
+                        <p className="text-sm text-gray-500 mb-1">الإجمالي</p>
                         <p className="text-xl font-black text-emerald-600">
                             {(batch as any).totalNet?.toLocaleString()} ج.م
                         </p>
@@ -142,9 +142,9 @@ export default function BatchReport() {
                             <th className="px-4 py-3">اسم التاجر</th>
                             <th className="px-4 py-3">الخدمة</th>
                             <th className="px-4 py-3">رقم الموافقة</th>
-                            <th className="px-4 py-3 text-left">المبلغ</th>
-                            <th className="px-4 py-3 text-left">الربح (1.15%)</th>
-                            <th className="px-4 py-3 text-left">الصافي</th>
+                            <th className="px-4 py-3 text-left">المبلغ الصافي</th>
+                            <th className="px-4 py-3 text-left">العمولة (1.15%)</th>
+                            <th className="px-4 py-3 text-left">الإجمالي</th>
                             <th className="px-4 py-3 rounded-tl-lg text-center print:hidden">إجراءات</th>
                         </tr>
                     </thead>
