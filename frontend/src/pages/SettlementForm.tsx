@@ -159,7 +159,11 @@ export default function SettlementWorkFlow() {
                 const password = prompt("جلسة العمل انتهت أو غير مصرح لك. الرجاء إدخال كلمة مرور المسؤول للمتابعة:");
                 if (password && legacyLogin(password)) {
                     try {
-                        await api.post(`/settlements/batches/${encodeURIComponent(batchNumber)}/settle`);
+                        await api.post(`/settlements/batches/${encodeURIComponent(batchNumber)}/settle`, {}, {
+                            headers: {
+                                'x-admin-password': password
+                            }
+                        });
                         alert(`تم تسوية الباتش ${batchNumber} بنجاح!`);
                         fetchBatches();
                         return;
