@@ -138,8 +138,10 @@ export default function SettlementWorkFlow() {
             await api.post(`/settlements/batches/${encodeURIComponent(batchNumber)}/settle`);
             alert(`تم تسوية الباتش ${batchNumber} بنجاح!`);
             fetchBatches();
-        } catch (e) {
-            alert('حدث خطأ أثناء التسوية');
+        } catch (e: any) {
+            console.error('Batch Settlement Error:', e);
+            const msg = e.response?.data?.message || e.response?.data?.error || 'حدث خطأ أثناء التسوية';
+            alert(msg);
         } finally {
             setSettling(null);
         }
