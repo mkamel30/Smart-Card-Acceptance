@@ -37,19 +37,23 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Special case: If the request is for settlement and has a manual password attempt, don't redirect
+        // We can detect this if the error is handled by the caller, but axios interceptors run first.
+        // However, we can check if the current page is one where we want manual control.
+
         if (error.response?.status === 401) {
             const token = localStorage.getItem('token');
+            const isSettlementPage = window.location.pathname.includes('/settlement');
 
-            // Only force login if they WERE logged in (had a token)
-            if (token) {
+            // Only force login if they WERE logged in (had a token) AND it's not a page where we want manual auth handling
+            if (token && !isSettlementPage) {
                 console.error('Session expired or unauthorized');
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 window.location.href = '/login';
             } else {
-                // If they are a guest and get a 401, maybe just go back to branch selection
-                console.warn('Unauthorized guest access');
-                // Optional: window.location.href = '/select-branch';
+                console.warn('Unauthorized access', isSettlementPage ? '- handling manually' : '- guest');
+                // Don't auto-redirect here, let the component handle the 401 (e.g., prompt for password)
             }
         }
         return Promise.reject(error);
