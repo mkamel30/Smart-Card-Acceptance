@@ -79,6 +79,7 @@ export class OCRController {
             res.status(200).json({
                 success: true,
                 data: result.data,
+                imageUrl: result.imageUrl,
                 rawText: result.rawText,
                 engine: result.engine,
                 processingInfo: {

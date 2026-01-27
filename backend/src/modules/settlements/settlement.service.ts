@@ -66,6 +66,7 @@ export class SettlementService {
                 createdBy: userId,
                 status: 'PENDING',
                 branchId: data.branchId,
+                receiptImageUrl: data.receiptImageUrl,
                 receipt: data.receiptImageUrl ? {
                     create: {
                         imageUrl: data.receiptImageUrl,

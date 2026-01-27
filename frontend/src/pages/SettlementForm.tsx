@@ -103,9 +103,11 @@ export default function SettlementWorkFlow() {
     useEffect(() => {
         fetchRecent();
         // Handle incoming OCR data if navigated from Quick Scan
-        const ocrData = (location.state as any)?.ocrData;
+        const state = location.state as any;
+        const ocrData = state?.ocrData;
         if (ocrData) {
             applyOCR(ocrData);
+            if (state.imageUrl) setReceiptImageUrl(state.imageUrl);
             // Clear the state to prevent re-applying on refresh
             window.history.replaceState({}, document.title);
         }
