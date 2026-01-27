@@ -428,6 +428,7 @@ export default function SettlementWorkFlow() {
                             <div className="space-y-4">
                                 {recentSettlements.map((s, i) => (
                                     <div key={i} className="flex justify-between items-center border-b border-white/10 pb-3 last:border-0">
+                                        <div className="flex items-center gap-3">
                                             <div className="flex items-center gap-1.5">
                                                 {getImageUrl(s) && (
                                                     <button
@@ -454,159 +455,158 @@ export default function SettlementWorkFlow() {
                                         <p className="font-black text-primary-light whitespace-nowrap">{Number(s.netAmount).toLocaleString()} ج.م</p>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                        <div className="bg-primary/5 border border-primary/20 p-6 rounded-2xl">
+                            <p className="text-sm text-primary font-bold mb-1">تعليمات:</p>
+                            <p className="text-xs text-gray-600 leading-relaxed">
+                                يمكنك استخدام المسح الضوئي (OCR) لإيصالات بنك مصر ليقوم النظام بملء التاريخ والباتش والموافقة والمبالغ تلقائياً.
+                            </p>
                         </div>
                     </div>
-                    <div className="bg-primary/5 border border-primary/20 p-6 rounded-2xl">
-                        <p className="text-sm text-primary font-bold mb-1">تعليمات:</p>
-                        <p className="text-xs text-gray-600 leading-relaxed">
-                            يمكنك استخدام المسح الضوئي (OCR) لإيصالات بنك مصر ليقوم النظام بملء التاريخ والباتش والموافقة والمبالغ تلقائياً.
-                        </p>
-                    </div>
                 </div>
-                </div>
-    ) : (
-        /* Tab 2: Settle / Report View */
-        <div className="space-y-4">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div>
-                        <h2 className="text-xl font-bold">تسوية الباتشات</h2>
-                        <p className="text-sm text-gray-500">المعاملات مجمعة حسب رقم الباتش</p>
-                    </div>
-                    <div className="flex gap-2 text-xs">
-                        <span className="flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
-                            <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-                            معلقة
-                        </span>
-                        <span className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                            <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                            تمت التسوية
-                        </span>
-                    </div>
-                </div>
+            ) : (
+                /* Tab 2: Settle / Report View */
+                <div className="space-y-4">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold">تسوية الباتشات</h2>
+                                <p className="text-sm text-gray-500">المعاملات مجمعة حسب رقم الباتش</p>
+                            </div>
+                            <div className="flex gap-2 text-xs">
+                                <span className="flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
+                                    <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                    معلقة
+                                </span>
+                                <span className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                    تمت التسوية
+                                </span>
+                            </div>
+                        </div>
 
-                {batches.length === 0 ? (
-                    <p className="text-center text-gray-400 py-10">لا توجد معاملات بعد</p>
-                ) : (
-                    <div className="space-y-4">
-                        {batches.map((batch) => (
-                            <div
-                                key={batch.batchNumber}
-                                className={`border rounded-xl overflow-hidden ${batch.isSettled ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}
-                            >
-                                <div className={`p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${batch.isSettled ? 'bg-green-100' : 'bg-gray-50'}`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg ${batch.isSettled ? 'bg-green-200 text-green-700' : 'bg-white border border-gray-200 text-primary'}`}>
-                                            <Package className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-lg">باتش #{batch.batchNumber}</p>
-                                            <p className="text-xs text-gray-500">
-                                                {batch.transactions.length} معاملة | {new Date(batch.settlementDate).toLocaleDateString('ar-EG')}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full lg:w-auto">
-                                        <p className="text-xl font-black text-primary text-left sm:text-right">
-                                            {batch.totalAmount.toLocaleString()} ج.م
-                                        </p>
-
-                                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
-                                            {batch.isSettled ? (
-                                                <span className="col-span-2 sm:w-auto bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                    تمت التسوية
-                                                </span>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleDownloadPDF(batch.batchNumber)}
-                                                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1"
-                                                        title="تحميل تقرير PDF"
-                                                    >
-                                                        <Download className="w-4 h-4" />
-                                                        <span className="sm:hidden">PDF</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDownloadExcel(batch.batchNumber)}
-                                                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1 text-green-700 bg-green-50 hover:bg-green-100 border-green-200"
-                                                        title="تحميل تقرير Excel"
-                                                    >
-                                                        <FileSpreadsheet className="w-4 h-4" />
-                                                        <span className="sm:hidden">Excel</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleEmailPDF(batch)}
-                                                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1"
-                                                        title="إرسال التقرير بالبريد"
-                                                    >
-                                                        <Mail className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleSettleBatch(batch.batchNumber)}
-                                                        disabled={settling === batch.batchNumber}
-                                                        className="col-span-2 sm:w-auto btn-primary px-4 py-2 text-sm flex items-center justify-center gap-2"
-                                                        title="تنفيذ التسوية النهائية"
-                                                    >
-                                                        {settling === batch.batchNumber ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                                                        تسوية
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="divide-y divide-gray-100 bg-white">
-                                    {batch.transactions.map((t: any, idx: number) => (
-                                        <div key={t.id} className="p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50 transition-colors">
-                                            <div className="flex items-start gap-3">
-                                                <span className="text-gray-400 text-sm mt-0.5 w-6">{idx + 1}</span>
-                                                {getImageUrl(t) && (
-                                                    <button
-                                                        onClick={() => window.open(getImageUrl(t), '_blank')}
-                                                        className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-primary transition-colors"
-                                                        title="معاينة صورة الإيصال"
-                                                    >
-                                                        <Image className="w-4 h-4" />
-                                                    </button>
-                                                )}
+                        {batches.length === 0 ? (
+                            <p className="text-center text-gray-400 py-10">لا توجد معاملات بعد</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {batches.map((batch) => (
+                                    <div
+                                        key={batch.batchNumber}
+                                        className={`border rounded-xl overflow-hidden ${batch.isSettled ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}
+                                    >
+                                        <div className={`p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${batch.isSettled ? 'bg-green-100' : 'bg-gray-50'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-lg ${batch.isSettled ? 'bg-green-200 text-green-700' : 'bg-white border border-gray-200 text-primary'}`}>
+                                                    <Package className="w-5 h-5" />
+                                                </div>
                                                 <div>
-                                                    <p className="font-bold text-sm text-gray-800">{t.merchantName || t.merchantCode}</p>
-                                                    <p className="text-xs text-gray-500 line-clamp-1">{t.subService}</p>
+                                                    <p className="font-bold text-lg">باتش #{batch.batchNumber}</p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {batch.transactions.length} معاملة | {new Date(batch.settlementDate).toLocaleDateString('ar-EG')}
+                                                    </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 text-sm bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg">
-                                                <span className="text-gray-500 text-xs">#{t.approvalNumber}</span>
-                                                <span className="text-gray-500 font-mono text-xs">**** {t.last4Digits}</span>
-                                                <span className="font-bold text-primary">{Number(t.settledAmount).toLocaleString()}</span>
-                                                <button
-                                                    onClick={() => handleEmailSingle(t)}
-                                                    className="text-gray-400 hover:text-primary transition-colors p-1"
-                                                    title="إرسال بريد"
-                                                >
-                                                    <Mail className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => window.open(`/settlement/${t.id}/print`, '_blank')}
-                                                    className="text-gray-400 hover:text-blue-600 transition-colors p-1"
-                                                    title="طباعة الإيصال"
-                                                >
-                                                    <Printer className="w-4 h-4" />
-                                                </button>
+
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full lg:w-auto">
+                                                <p className="text-xl font-black text-primary text-left sm:text-right">
+                                                    {batch.totalAmount.toLocaleString()} ج.م
+                                                </p>
+
+                                                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
+                                                    {batch.isSettled ? (
+                                                        <span className="col-span-2 sm:w-auto bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                                                            <CheckCircle2 className="w-4 h-4" />
+                                                            تمت التسوية
+                                                        </span>
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleDownloadPDF(batch.batchNumber)}
+                                                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1"
+                                                                title="تحميل تقرير PDF"
+                                                            >
+                                                                <Download className="w-4 h-4" />
+                                                                <span className="sm:hidden">PDF</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDownloadExcel(batch.batchNumber)}
+                                                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1 text-green-700 bg-green-50 hover:bg-green-100 border-green-200"
+                                                                title="تحميل تقرير Excel"
+                                                            >
+                                                                <FileSpreadsheet className="w-4 h-4" />
+                                                                <span className="sm:hidden">Excel</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleEmailPDF(batch)}
+                                                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1"
+                                                                title="إرسال التقرير بالبريد"
+                                                            >
+                                                                <Mail className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleSettleBatch(batch.batchNumber)}
+                                                                disabled={settling === batch.batchNumber}
+                                                                className="col-span-2 sm:w-auto btn-primary px-4 py-2 text-sm flex items-center justify-center gap-2"
+                                                                title="تنفيذ التسوية النهائية"
+                                                            >
+                                                                {settling === batch.batchNumber ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                                تسوية
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+
+                                        <div className="divide-y divide-gray-100 bg-white">
+                                            {batch.transactions.map((t: any, idx: number) => (
+                                                <div key={t.id} className="p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50 transition-colors">
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="text-gray-400 text-sm mt-0.5 w-6">{idx + 1}</span>
+                                                        {getImageUrl(t) && (
+                                                            <button
+                                                                onClick={() => window.open(getImageUrl(t), '_blank')}
+                                                                className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-primary transition-colors"
+                                                                title="معاينة صورة الإيصال"
+                                                            >
+                                                                <Image className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        <div>
+                                                            <p className="font-bold text-sm text-gray-800">{t.merchantName || t.merchantCode}</p>
+                                                            <p className="text-xs text-gray-500 line-clamp-1">{t.subService}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 text-sm bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg">
+                                                        <span className="text-gray-500 text-xs">#{t.approvalNumber}</span>
+                                                        <span className="text-gray-500 font-mono text-xs">**** {t.last4Digits}</span>
+                                                        <span className="font-bold text-primary">{Number(t.settledAmount).toLocaleString()}</span>
+                                                        <button
+                                                            onClick={() => handleEmailSingle(t)}
+                                                            className="text-gray-400 hover:text-primary transition-colors p-1"
+                                                            title="إرسال بريد"
+                                                        >
+                                                            <Mail className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => window.open(`/settlement/${t.id}/print`, '_blank')}
+                                                            className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+                                                            title="طباعة الإيصال"
+                                                        >
+                                                            <Printer className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        )}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
-    )
-}
-        </div >
     );
 }
