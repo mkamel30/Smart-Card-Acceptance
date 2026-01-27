@@ -49,10 +49,10 @@ export const adminAuth = (req: Request, res: Response, next: NextFunction) => {
         // Verify JWT token
         const decoded = jwt.verify(token, getJwtSecret()) as any;
 
-        // Check if user has admin role
-        if (decoded.role !== 'ADMIN') {
+        // Check if user has admin or manager role
+        if (!['ADMIN', 'BRANCH_MANAGER'].includes(decoded.role)) {
             return res.status(403).json({
-                error: 'Forbidden: Admin access required',
+                error: 'Forbidden: Admin or Manager access required',
                 code: 'INSUFFICIENT_PERMISSIONS'
             });
         }
@@ -110,14 +110,14 @@ export const unifiedAdminAuth = (req: Request, res: Response, next: NextFunction
     const authHeader = req.headers.authorization;
     const adminPassword = req.headers['x-admin-password'] || req.body.adminPassword || req.query.password;
 
-    // 1. Try JWT first if header exists
-    if (authHeader) {
-        return adminAuth(req, res, next);
-    }
-
-    // 2. Fallback to legacy password
+    // 1. Prioritize legacy password if present (allows override or fallback)
     if (adminPassword) {
         return legacyAdminAuth(req, res, next);
+    }
+
+    // 2. Try JWT if header exists
+    if (authHeader) {
+        return adminAuth(req, res, next);
     }
 
     // 3. Neither provided

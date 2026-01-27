@@ -39,7 +39,7 @@ interface BatchGroup {
 
 export default function SettlementWorkFlow() {
     const location = useLocation();
-    const { isAdmin, legacyLogin } = useAdmin();
+    const { isAdmin, isBranchManager, legacyLogin } = useAdmin();
     const [activeTab, setActiveTab] = useState<'entry' | 'settle'>('entry');
     const [entryMode, setEntryMode] = useState<'manual' | 'ocr'>('manual');
     const [scanning, setScanning] = useState(false);
@@ -137,7 +137,7 @@ export default function SettlementWorkFlow() {
         if (!confirm(`هل أنت متأكد من تسوية جميع معاملات الباتش ${batchNumber}؟`)) return;
 
         // Ensure user is authorized (either via JWT or legacy password)
-        if (!isAdmin) {
+        if (!isAdmin && !isBranchManager) {
             const password = prompt("الرجاء إدخال كلمة مرور المسؤول لتأكيد التسوية:");
             if (!password) return;
             if (!legacyLogin(password)) {
