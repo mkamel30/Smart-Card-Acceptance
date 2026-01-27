@@ -24,6 +24,8 @@ export class ExportService {
             { header: 'اسم المخبز/التاجر', key: 'merchantName', width: 25 },
             { header: 'نوع الخدمة', key: 'subService', width: 15 },
             { header: 'المبلغ المسدد', key: 'settledAmount', width: 15 },
+            { header: 'العمولة (1.15%)', key: 'fees', width: 15 },
+            { header: 'المبلغ الصافي', key: 'netAmount', width: 15 },
             { header: 'رقم الموافقة', key: 'approvalNumber', width: 15 },
             { header: 'رقم الباتش', key: 'batchNumber', width: 15 },
             { header: 'أول 6 أرقام (BIN)', key: 'cardBin', width: 15 },
@@ -35,9 +37,11 @@ export class ExportService {
                 index: i + 1,
                 settlementDate: s.settlementDate.toLocaleDateString('ar-EG'),
                 merchantCode: s.merchantCode,
-                merchantName: s.receipt?.merchantName || '',
+                merchantName: s.receipt?.merchantName || s.merchantName || '',
                 subService: s.subService || s.serviceCategory,
                 settledAmount: Number(s.settledAmount),
+                fees: Number(s.fees),
+                netAmount: Number(s.netAmount),
                 approvalNumber: s.approvalNumber || '',
                 batchNumber: s.batchNumber || '',
                 cardBin: s.cardBin || '',
@@ -131,7 +135,7 @@ export class ExportService {
         sheet.getCell('F3').numFmt = '#,##0.00 "ج.م"';
 
         // Table Header
-        const headers = ['م', 'كود التاجر', 'اسم التاجر', 'أول 6 أرقام (BIN)', 'آخر 4 أرقام', 'رقم الموافقة', 'المبلغ الصافي'];
+        const headers = ['م', 'كود التاجر', 'اسم التاجر', 'أول 6 أرقام (BIN)', 'آخر 4 أرقام', 'رقم الموافقة', 'المبلغ المسدد', 'العمولة', 'المبلغ الصافي'];
         const headerRow = sheet.getRow(6);
         headers.forEach((h, i) => {
             const cell = headerRow.getCell(i + 1);
@@ -151,7 +155,11 @@ export class ExportService {
             row.getCell(5).value = t.last4Digits || '';
             row.getCell(6).value = t.approvalNumber || '';
             row.getCell(7).value = Number(t.settledAmount);
+            row.getCell(8).value = Number(t.fees);
+            row.getCell(9).value = Number(t.netAmount);
             row.getCell(7).numFmt = '#,##0.00';
+            row.getCell(8).numFmt = '#,##0.00';
+            row.getCell(9).numFmt = '#,##0.00';
 
             row.eachCell((cell) => {
                 cell.alignment = { horizontal: 'center' };
@@ -166,7 +174,7 @@ export class ExportService {
 
         // Column widths
         sheet.columns = [
-            { width: 5 }, { width: 15 }, { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 20 }
+            { width: 5 }, { width: 15 }, { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 20 }
         ];
 
         return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;

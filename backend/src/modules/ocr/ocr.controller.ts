@@ -98,6 +98,28 @@ export class OCRController {
         }
     }
 
+    uploadOnly = async (req: Request, res: Response) => {
+        try {
+            const file = req.file;
+            if (!file) {
+                return res.status(400).json({ error: 'No file uploaded' });
+            }
+
+            const imageUrl = await ocrService.uploadImage(file);
+
+            res.status(200).json({
+                success: true,
+                imageUrl
+            });
+        } catch (error: any) {
+            console.error('OCR Upload Error:', error);
+            res.status(500).json({
+                error: 'Failed to upload image',
+                message: error.message
+            });
+        }
+    }
+
     private validateImageHeader(buffer: Buffer): boolean {
         try {
             if (!buffer || buffer.length === 0) return false;
