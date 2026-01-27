@@ -22,8 +22,8 @@ export const CreateSettlementSchema = z.object({
     merchantName: z.string().max(200).optional(),
     batchNumber: z.string()
         .min(1, 'Batch number is required')
-        .max(10, 'Batch number cannot exceed 10 characters')
-        .regex(/^[a-zA-Z0-9-]+$/, 'Batch number can only contain letters, numbers, and hyphens'),
+        .max(20, 'Batch number cannot exceed 20 characters')
+        .regex(/^[#a-zA-Z0-9/-]+$/, 'Batch number can only contain letters, numbers, hyphens, slashes, and #'),
     approvalNumber: z.string()
         .min(4, 'Approval number must be at least 4 digits')
         .max(8, 'Approval number cannot exceed 8 digits')
