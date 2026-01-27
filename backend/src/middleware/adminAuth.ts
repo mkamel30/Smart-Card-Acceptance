@@ -105,6 +105,30 @@ export const legacyAdminAuth = (req: Request, res: Response, next: NextFunction)
     });
 };
 
+// Combined authentication middleware (supports both JWT and Legacy Password)
+export const unifiedAdminAuth = (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    const adminPassword = req.headers['x-admin-password'] || req.body.adminPassword || req.query.password;
+
+    // 1. Try JWT first if header exists
+    if (authHeader) {
+        return adminAuth(req, res, next);
+    }
+
+    // 2. Fallback to legacy password
+    if (adminPassword) {
+        return legacyAdminAuth(req, res, next);
+    }
+
+    // 3. Neither provided
+    return res.status(401).json({
+        error: 'Unauthorized: Authentication required',
+        code: 'AUTH_REQUIRED',
+        message: 'Please provide either a valid JWT token or admin password'
+    });
+};
+
 // Apply rate limiting to admin auth
 export const adminAuthWithRateLimit = [adminRateLimit, adminAuth];
 export const legacyAdminAuthWithRateLimit = [adminRateLimit, legacyAdminAuth];
+export const unifiedAdminAuthWithRateLimit = [adminRateLimit, unifiedAdminAuth];

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import settlementController from './settlement.controller';
-import { legacyAdminAuthWithRateLimit } from '../../middleware/adminAuth';
+import { unifiedAdminAuthWithRateLimit } from '../../middleware/adminAuth';
 
 
 const router = Router();
@@ -15,13 +15,12 @@ router.get('/:id', settlementController.getOne);
 // (Add any settlement-specific protected routes here)
 
 // Admin routes (require admin authentication with rate limiting)
-// Note: Using legacy admin auth for backward compatibility during transition
-// This should be changed to adminAuthWithRateLimit after migration period
-router.post('/batches/:batchNumber/settle', legacyAdminAuthWithRateLimit, settlementController.settleBatch);
-router.get('/sync/fees', legacyAdminAuthWithRateLimit, settlementController.syncFees);
-router.put('/:id', legacyAdminAuthWithRateLimit, settlementController.update);
-router.patch('/:id/status', legacyAdminAuthWithRateLimit, settlementController.updateStatus);
-router.delete('/:id', legacyAdminAuthWithRateLimit, settlementController.delete);
+// Note: Using unified admin auth to support both JWT and legacy password
+router.post('/batches/:batchNumber/settle', unifiedAdminAuthWithRateLimit, settlementController.settleBatch);
+router.get('/sync/fees', unifiedAdminAuthWithRateLimit, settlementController.syncFees);
+router.put('/:id', unifiedAdminAuthWithRateLimit, settlementController.update);
+router.patch('/:id/status', unifiedAdminAuthWithRateLimit, settlementController.updateStatus);
+router.delete('/:id', unifiedAdminAuthWithRateLimit, settlementController.delete);
 
 
 
