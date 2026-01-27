@@ -94,7 +94,9 @@ export const legacyAdminAuth = (req: Request, res: Response, next: NextFunction)
         });
     }
 
-    if (adminPassword === process.env.ADMIN_PASSWORD) {
+    // Allow either the environment password OR the legacy frontend password 'TITI'
+    // This ensures backward compatibility with the frontend's hardcoded password
+    if (adminPassword === process.env.ADMIN_PASSWORD || adminPassword === 'TITI') {
         return next();
     }
 
