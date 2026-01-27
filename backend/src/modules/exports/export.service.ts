@@ -23,9 +23,9 @@ export class ExportService {
             { header: 'رقم المخبز/التاجر', key: 'merchantCode', width: 20 },
             { header: 'اسم المخبز/التاجر', key: 'merchantName', width: 25 },
             { header: 'نوع الخدمة', key: 'subService', width: 15 },
-            { header: 'المبلغ المسدد', key: 'settledAmount', width: 15 },
+            { header: 'المبلغ الأساسي', key: 'settledAmount', width: 15 },
             { header: 'العمولة (1.15%)', key: 'fees', width: 15 },
-            { header: 'المبلغ الصافي', key: 'netAmount', width: 15 },
+            { header: 'الإجمالي بالعمولة', key: 'netAmount', width: 15 },
             { header: 'رقم الموافقة', key: 'approvalNumber', width: 15 },
             { header: 'رقم الباتش', key: 'batchNumber', width: 15 },
             { header: 'أول 6 أرقام (BIN)', key: 'cardBin', width: 15 },
@@ -135,7 +135,7 @@ export class ExportService {
         sheet.getCell('F3').numFmt = '#,##0.00 "ج.م"';
 
         // Table Header
-        const headers = ['م', 'كود التاجر', 'اسم التاجر', 'أول 6 أرقام (BIN)', 'آخر 4 أرقام', 'رقم الموافقة', 'المبلغ المسدد', 'العمولة', 'المبلغ الصافي'];
+        const headers = ['م', 'كود التاجر', 'اسم التاجر', 'أول 6 أرقام (BIN)', 'آخر 4 أرقام', 'رقم الموافقة', 'صافي المعاملة', 'العمولة', 'الإجمالي'];
         const headerRow = sheet.getRow(6);
         headers.forEach((h, i) => {
             const cell = headerRow.getCell(i + 1);

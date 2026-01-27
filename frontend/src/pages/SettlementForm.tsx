@@ -155,7 +155,11 @@ export default function SettlementWorkFlow() {
     const handleEmailPDF = (batch: BatchGroup) => {
         const merchantCode = batch.transactions[0]?.merchantCode || '';
         const subject = `تسوية فروق تصنيع_${merchantCode}`;
-        const body = `السادة الزملاء،\n\nيرجى العلم ببيانات التسوية التالية:\n\nالتاريخ: ${new Date(batch.settlementDate).toLocaleDateString('ar-EG')}\nكود التاجر: ${merchantCode}\nالمبلغ الصافي: ${(batch as any).totalNet?.toLocaleString() || batch.totalAmount.toLocaleString()} ج.م\nالباتش: ${batch.batchNumber} / الموافقة: ${batch.transactions[0]?.approvalNumber || ''}\n\nمع التحية.`;
+        const totalNet = Number((batch as any).totalNet || batch.totalAmount + (batch as any).totalFees || 0);
+        const totalSettled = Number(batch.totalAmount);
+        const totalFees = Number((batch as any).totalFees || 0);
+
+        const body = `السادة الزملاء،\n\nيرجى العلم ببيانات التسوية التالية:\n\nالتاريخ: ${new Date(batch.settlementDate).toLocaleDateString('ar-EG')}\nكود التاجر: ${merchantCode}\nصافي مبلغ الخدمة: ${totalSettled.toLocaleString()} ج.م\nالعمولة (1.15%): ${totalFees.toLocaleString()} ج.م\nالإجمالي: ${totalNet.toLocaleString()} ج.م\nالباتش: ${batch.batchNumber} / الموافقة: ${batch.transactions[0]?.approvalNumber || ''}\n\nمع التحية.`;
 
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     };
@@ -163,7 +167,7 @@ export default function SettlementWorkFlow() {
     const handleEmailSingle = (s: any) => {
         const merchantCode = s.merchantCode || '';
         const subject = `تسوية فروق تصنيع_${merchantCode}`;
-        const body = `السادة الزملاء،\n\nيرجى العلم ببيانات التسوية التالية:\n\nالتاريخ: ${new Date(s.settlementDate).toLocaleDateString('ar-EG')}\nكود التاجر: ${merchantCode}\nالمبلغ الصافي: ${Number(s.netAmount || s.settledAmount).toLocaleString()} ج.م\nالباتش: ${s.batchNumber} / الموافقة: ${s.approvalNumber || ''}\n\nمع التحية.`;
+        const body = `السادة الزملاء،\n\nيرجى العلم ببيانات التسوية التالية:\n\nالتاريخ: ${new Date(s.settlementDate).toLocaleDateString('ar-EG')}\nكود التاجر: ${merchantCode}\nصافي مبلغ الخدمة: ${Number(s.settledAmount).toLocaleString()} ج.م\nالعمولة (1.15%): ${Number(s.fees).toLocaleString()} ج.م\nالإجمالي: ${Number(s.netAmount).toLocaleString()} ج.م\nالباتش: ${s.batchNumber} / الموافقة: ${s.approvalNumber || ''}\n\nمع التحية.`;
 
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     };
@@ -452,7 +456,7 @@ export default function SettlementWorkFlow() {
                                                 <p className="text-[10px] opacity-50">{new Date(s.settlementDate).toLocaleString('ar-EG')}</p>
                                             </div>
                                         </div>
-                                        <p className="font-black text-primary-light whitespace-nowrap">{Number(s.netAmount).toLocaleString()} ج.م</p>
+                                        <p className="font-black text-primary-light whitespace-nowrap">{Number(s.settledAmount).toLocaleString()} ج.م</p>
                                     </div>
                                 ))}
                             </div>

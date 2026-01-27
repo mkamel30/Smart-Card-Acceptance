@@ -143,7 +143,7 @@ export class PDFService {
         doc.text(this.processArabic('اسم التاجر'), colName, tableTop, { width: 110, align: 'right' });
         doc.text(this.processArabic('بيانات الكارت'), colCard, tableTop, { width: 85, align: 'right' });
         doc.text(this.processArabic('الموافقة'), colApprov, tableTop, { width: 55, align: 'right' });
-        doc.text(this.processArabic('المبلغ'), colAmount, tableTop, { width: 55, align: 'right' });
+        doc.text(this.processArabic('المبلغ الصافي'), colAmount, tableTop, { width: 55, align: 'right' });
         doc.text(this.processArabic('العمولة'), colFees, tableTop, { width: 45, align: 'right' });
         doc.text(this.processArabic('الإجمالي'), colTotal, tableTop, { width: 60, align: 'right' });
 

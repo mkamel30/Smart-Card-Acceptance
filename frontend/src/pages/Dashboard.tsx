@@ -4,7 +4,6 @@ import { Download, Mail, Edit2, Filter, Zap, Loader2, Printer, Trash2, Image } f
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/context/AdminContext';
 import EditSettlementModal from '@/components/EditSettlementModal';
-import { format } from 'date-fns';
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -93,11 +92,11 @@ export default function Dashboard() {
     };
 
     const handleSendEmail = (s: any) => {
-        const subject = `تقرير تسوية - ${s.merchantCode} - ${format(new Date(s.settlementDate), 'yyyy/MM/dd')}`;
-        const body = `السادة الزملاء،%0D%0A%0D%0Aيرجى العلم ببيانات التسوية التالية:%0D%0A%0D%0Aالتاريخ: ${format(new Date(s.settlementDate), 'yyyy/MM/dd')}%0D%0Aكود التاجر: ${s.merchantCode}%0D%0Aالمبلغ الصافي: ${Number(s.netAmount).toLocaleString()} ج.م%0D%0Aالباتش: ${s.batchNumber || '---'} / الموافقة: ${s.approvalNumber || '---'}%0D%0Aالحالة: ${s.status}%0D%0A%0D%0Aمع التحية.`;
+        const merchantCode = s.merchantCode || '';
+        const subject = `تسوية فروق تصنيع_${merchantCode}`;
+        const body = `السادة الزملاء،\n\nيرجى العلم ببيانات التسوية التالية:\n\nالتاريخ: ${new Date(s.settlementDate).toLocaleDateString('ar-EG')}\nكود التاجر: ${merchantCode}\nصافي مبلغ الخدمة: ${Number(s.settledAmount).toLocaleString()} ج.م\nالعمولة (1.15%): ${Number(s.fees).toLocaleString()} ج.م\nالإجمالي: ${Number(s.netAmount).toLocaleString()} ج.م\nالباتش: ${s.batchNumber || '---'} / الموافقة: ${s.approvalNumber || '---'}\n\nمع التحية.`;
 
-        window.location.href = `mailto:?subject=${subject}&body=${body}`;
-        // toggle "emailSent" visually? No API to update it if we just open mailto.
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     };
 
     return (
@@ -141,15 +140,15 @@ export default function Dashboard() {
                     </p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-emerald-500">
-                    <p className="text-sm text-gray-500">الإجمالي الشامل (1.15%+)</p>
+                    <p className="text-sm text-gray-500">إجمالي المبالغ بالعمولة</p>
                     <p className="text-2xl font-bold text-emerald-600">
                         {Number(stats?.netAmount || 0).toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.م</span>
                     </p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-emerald-500">
-                    <p className="text-sm text-gray-500">صافي المبالغ</p>
+                    <p className="text-sm text-gray-500">صافي المبالغ (بدون عمولة)</p>
                     <p className="text-2xl font-bold text-emerald-600">
-                        {Number(stats?.netAmount || 0).toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.م</span>
+                        {Number(stats?.settledAmount || 0).toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.م</span>
                     </p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-r-4 border-r-orange-500">
@@ -236,7 +235,7 @@ export default function Dashboard() {
                                 <td className="px-6 py-4 text-xs text-gray-500">
                                     B: {s.batchNumber || '---'} / A: {s.approvalNumber || '---'}
                                 </td>
-                                <td className="px-6 py-4 text-sm font-black text-gray-800">{Number(s.netAmount).toLocaleString()} ج.م</td>
+                                <td className="px-6 py-4 text-sm font-black text-gray-800">{Number(s.settledAmount).toLocaleString()} ج.م</td>
                                 <td className="px-6 py-4">
                                     <span className={`px-2 py-1 text-[10px] rounded-lg font-bold ${s.status === 'APPROVED' ? 'bg-green-100 text-green-700 border border-green-200' :
                                         s.status === 'PENDING' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
