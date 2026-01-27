@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useLocation } from 'react-router-dom';
 import api from '@/api/client';
+import { useAdmin } from '../context/AdminContext';
 import { Zap, CheckCircle2, Loader2, Plus, Package, Download, Mail, FileSpreadsheet, Printer, Image } from 'lucide-react';
 
 const settlementSchema = z.object({
@@ -38,6 +39,7 @@ interface BatchGroup {
 
 export default function SettlementWorkFlow() {
     const location = useLocation();
+    const { isAdmin, legacyLogin } = useAdmin();
     const [activeTab, setActiveTab] = useState<'entry' | 'settle'>('entry');
     const [entryMode, setEntryMode] = useState<'manual' | 'ocr'>('manual');
     const [scanning, setScanning] = useState(false);
@@ -133,6 +135,17 @@ export default function SettlementWorkFlow() {
 
     const handleSettleBatch = async (batchNumber: string) => {
         if (!confirm(`هل أنت متأكد من تسوية جميع معاملات الباتش ${batchNumber}؟`)) return;
+
+        // Ensure user is authorized (either via JWT or legacy password)
+        if (!isAdmin) {
+            const password = prompt("الرجاء إدخال كلمة مرور المسؤول لتأكيد التسوية:");
+            if (!password) return;
+            if (!legacyLogin(password)) {
+                alert("كلمة المرور غير صحيحة");
+                return;
+            }
+        }
+
         setSettling(batchNumber);
         try {
             await api.post(`/settlements/batches/${encodeURIComponent(batchNumber)}/settle`);
@@ -140,8 +153,25 @@ export default function SettlementWorkFlow() {
             fetchBatches();
         } catch (e: any) {
             console.error('Batch Settlement Error:', e);
-            const msg = e.response?.data?.message || e.response?.data?.error || 'حدث خطأ أثناء التسوية';
-            alert(msg);
+
+            // Handle auth failure (token expired or missing) by re-prompting for password
+            if (e.response?.status === 401) {
+                const password = prompt("جلسة العمل انتهت أو غير مصرح لك. الرجاء إدخال كلمة مرور المسؤول للمتابعة:");
+                if (password && legacyLogin(password)) {
+                    try {
+                        await api.post(`/settlements/batches/${encodeURIComponent(batchNumber)}/settle`);
+                        alert(`تم تسوية الباتش ${batchNumber} بنجاح!`);
+                        fetchBatches();
+                        return;
+                    } catch (retryError) {
+                        console.error('Retry failed', retryError);
+                        alert('فشل إعادة المحاولة. تأكد من صلاحياتك.');
+                    }
+                }
+            } else {
+                const msg = e.response?.data?.message || e.response?.data?.error || 'حدث خطأ أثناء التسوية';
+                alert(msg);
+            }
         } finally {
             setSettling(null);
         }
