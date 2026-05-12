@@ -144,6 +144,31 @@ export class SettlementController {
         }
     }
 
+    async deleteBatch(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { batchNumber } = req.params;
+            console.log(`[SettlementController] Deleting batch ${batchNumber}`);
+            await settlementService.deleteBatch(batchNumber);
+            res.status(204).send();
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async bulkDelete(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { ids } = req.body;
+            console.log(`[SettlementController] Bulk deleting ${ids?.length} transactions`);
+            if (!Array.isArray(ids) || ids.length === 0) {
+                return res.status(400).json({ message: 'IDs array is required' });
+            }
+            await settlementService.bulkDelete(ids);
+            res.status(204).send();
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getBatches(req: Request, res: Response, next: NextFunction) {
         try {
             const branchIdStr = req.query.branchId ? String(req.query.branchId) : undefined;

@@ -27,6 +27,7 @@ export default function BranchDashboard() {
     const [dateTo, setDateTo] = useState('');
     const [status, setStatus] = useState('');
     const [bank, setBank] = useState('');
+    const [search, setSearch] = useState('');
 
     const canSelectBranch = isAdmin || (user?.role === 'BRANCH_MANAGER' && user?.branches && user.branches.length > 1);
 
@@ -70,6 +71,7 @@ export default function BranchDashboard() {
             if (dateTo) params.dateTo = dateTo;
             if (status) params.status = status;
             if (bank) params.bankName = bank;
+            if (search) params.search = search;
 
             if (effectiveBranches && effectiveBranches.length > 0) {
                 params.branches = effectiveBranches.map(b => b.value);
@@ -94,6 +96,7 @@ export default function BranchDashboard() {
         setDateTo('');
         setStatus('');
         setBank('');
+        setSearch('');
     };
 
     const handleExport = async () => {
@@ -186,6 +189,7 @@ export default function BranchDashboard() {
                 dateTo,
                 status,
                 bankName: bank,
+                search,
                 page,
                 limit: 10
             };
@@ -419,6 +423,22 @@ export default function BranchDashboard() {
                         <option value="SETTLED">تمت التسوية</option>
                         <option value="REJECTED">مرفوض</option>
                     </select>
+                </div>
+                <div className="flex flex-col gap-1.5 md:col-span-4">
+                    <label className="text-xs font-bold text-gray-500 mr-1 flex items-center gap-1">
+                        بحث عام (رقم الباتش، كود التاجر، رقم الموافقة...)
+                    </label>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleApplyFilters()}
+                            placeholder="بحث في المعاملات..."
+                            className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none pr-10"
+                        />
+                        <LayoutDashboard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
                 </div>
             </div>
 

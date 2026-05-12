@@ -173,6 +173,31 @@ export class AnalyticsController {
             filters.cardType = query.cardType;
         }
 
+        // Search Fields
+        if (query.merchantCode) {
+            filters.merchantCode = query.merchantCode;
+        }
+        if (query.batchNumber) {
+            filters.batchNumber = query.batchNumber;
+        }
+        if (query.approvalNumber) {
+            filters.approvalNumber = query.approvalNumber;
+        }
+        if (query.merchantName) {
+            filters.merchantName = { contains: query.merchantName, mode: 'insensitive' };
+        }
+        if (query.search) {
+            const search = String(query.search);
+            filters.OR = [
+                ...(filters.OR || []),
+                { merchantCode: { contains: search, mode: 'insensitive' } },
+                { merchantName: { contains: search, mode: 'insensitive' } },
+                { batchNumber: { contains: search, mode: 'insensitive' } },
+                { approvalNumber: { contains: search, mode: 'insensitive' } },
+                { referenceNumber: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
         return filters;
     }
 }

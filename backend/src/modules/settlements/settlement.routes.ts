@@ -18,6 +18,8 @@ router.get('/:id', settlementController.getOne);
 // Note: Using unified admin auth to support both JWT and legacy password
 router.post('/batches/:batchNumber/settle', unifiedAdminAuthWithRateLimit, settlementController.settleBatch);
 router.put('/batches/:batchNumber', unifiedAdminAuthWithRateLimit, settlementController.updateBatch);
+router.delete('/batches/:batchNumber', unifiedAdminAuthWithRateLimit, settlementController.deleteBatch);
+router.post('/bulk-delete', unifiedAdminAuthWithRateLimit, settlementController.bulkDelete);
 router.get('/sync/fees', unifiedAdminAuthWithRateLimit, settlementController.syncFees);
 router.put('/:id', unifiedAdminAuthWithRateLimit, settlementController.update);
 router.patch('/:id/status', unifiedAdminAuthWithRateLimit, settlementController.updateStatus);

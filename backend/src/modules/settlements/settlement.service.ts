@@ -266,6 +266,20 @@ export class SettlementService {
             newSettlementDate: newSettlementDate,
         };
     }
+
+    // Delete all transactions in a batch
+    async deleteBatch(batchNumber: string) {
+        return await prisma.settlement.deleteMany({
+            where: { batchNumber }
+        });
+    }
+
+    // Bulk delete by IDs
+    async bulkDelete(ids: string[]) {
+        return await prisma.settlement.deleteMany({
+            where: { id: { in: ids } }
+        });
+    }
 }
 
 export default new SettlementService();
