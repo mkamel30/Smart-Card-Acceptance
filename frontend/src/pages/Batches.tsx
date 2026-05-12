@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '@/api/client';
-import { FileText, Eye, CheckCircle, Clock } from 'lucide-react';
+import { FileText, Eye, CheckCircle, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface BatchSummary {
@@ -15,10 +15,50 @@ interface BatchSummary {
 export default function Batches() {
     const [batches, setBatches] = useState<BatchSummary[]>([]);
     const [loading, setLoading] = useState(true);
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
     useEffect(() => {
         fetchBatches();
     }, []);
+
+    const sortedBatches = useMemo(() => {
+        let sortable = [...batches];
+        if (sortConfig !== null) {
+            sortable.sort((a, b) => {
+                let aVal = a[sortConfig.key as keyof BatchSummary];
+                let bVal = b[sortConfig.key as keyof BatchSummary];
+                
+                if (sortConfig.key === 'transactions') {
+                    aVal = a.transactions.length as any;
+                    bVal = b.transactions.length as any;
+                }
+
+                if (aVal < bVal) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aVal > bVal) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortable;
+    }, [batches, sortConfig]);
+
+    const requestSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const renderSortIcon = (key: string) => {
+        if (sortConfig?.key === key) {
+            return sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4 inline-block mr-1" /> : <ChevronDown className="w-4 h-4 inline-block mr-1" />;
+        }
+        return <ChevronUp className="w-4 h-4 inline-block mr-1 text-gray-300 opacity-0 group-hover:opacity-100" />;
+    };
 
     const fetchBatches = async () => {
         try {
@@ -45,20 +85,30 @@ export default function Batches() {
                 <table className="w-full text-right" dir="rtl">
                     <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
                         <tr>
-                            <th className="px-6 py-4">رقم الباتش</th>
-                            <th className="px-6 py-4">تاريخ المعاملات</th>
-                            <th className="px-6 py-4">عدد المعاملات</th>
-                            <th className="px-6 py-4">إجمالي المبلغ</th>
-                            <th className="px-6 py-4">الحالة</th>
+                            <th className="px-6 py-4 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('batchNumber')}>
+                                رقم الباتش {renderSortIcon('batchNumber')}
+                            </th>
+                            <th className="px-6 py-4 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('settlementDate')}>
+                                تاريخ المعاملات {renderSortIcon('settlementDate')}
+                            </th>
+                            <th className="px-6 py-4 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('transactions')}>
+                                عدد المعاملات {renderSortIcon('transactions')}
+                            </th>
+                            <th className="px-6 py-4 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('totalAmount')}>
+                                إجمالي المبلغ {renderSortIcon('totalAmount')}
+                            </th>
+                            <th className="px-6 py-4 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('isSettled')}>
+                                الحالة {renderSortIcon('isSettled')}
+                            </th>
                             <th className="px-6 py-4 text-left">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                         {loading ? (
                             <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500">جاري التحميل...</td></tr>
-                        ) : batches.length === 0 ? (
+                        ) : sortedBatches.length === 0 ? (
                             <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500 italic">لا توجد باتشات مسجلة</td></tr>
-                        ) : batches.map((batch) => (
+                        ) : sortedBatches.map((batch) => (
                             <tr key={batch.batchNumber} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 font-bold font-mono text-lg text-blue-600">
                                     #{batch.batchNumber || 'N/A'}

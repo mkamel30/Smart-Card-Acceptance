@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 import api from '@/api/client';
 
@@ -99,7 +99,14 @@ export default function EditSettlementModal({ isOpen, onClose, settlement, onSav
                             <input
                                 type="number"
                                 value={formData.settledAmount || ''}
-                                onChange={e => setFormData({ ...formData, settledAmount: e.target.value })}
+                                onChange={e => {
+                                    const val = Number(e.target.value);
+                                    setFormData({ 
+                                        ...formData, 
+                                        settledAmount: e.target.value,
+                                        fees: (Math.round(val * 0.0115 * 100) / 100).toString()
+                                    });
+                                }}
                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             />
                         </div>

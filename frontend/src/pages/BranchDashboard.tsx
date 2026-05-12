@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '@/api/client';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -7,7 +7,7 @@ import {
 import Select from 'react-select';
 import {
     LayoutDashboard, Calendar, Briefcase, Landmark, CreditCard,
-    ArrowUpRight, TrendingUp, RefreshCw, Download, Image as ImageIcon, X, ChevronLeft, ChevronRight
+    ArrowUpRight, TrendingUp, RefreshCw, Download, Image as ImageIcon, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/context/AdminContext';
@@ -135,6 +135,48 @@ export default function BranchDashboard() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [viewImage, setViewImage] = useState<string | null>(null);
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+    const sortedTransactions = useMemo(() => {
+        let sortable = [...transactions];
+        if (sortConfig !== null) {
+            sortable.sort((a, b) => {
+                let aVal = a[sortConfig.key];
+                let bVal = b[sortConfig.key];
+                
+                if (sortConfig.key === 'branchName') {
+                    aVal = a.branch?.name || '';
+                    bVal = b.branch?.name || '';
+                } else if (['totalAmount', 'fees', 'netAmount'].includes(sortConfig.key)) {
+                    aVal = Number(aVal || 0);
+                    bVal = Number(bVal || 0);
+                } else if (sortConfig.key === 'settlementDate') {
+                    aVal = new Date(aVal).getTime();
+                    bVal = new Date(bVal).getTime();
+                }
+
+                if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return sortable;
+    }, [transactions, sortConfig]);
+
+    const requestSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const renderSortIcon = (key: string) => {
+        if (sortConfig?.key === key) {
+            return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 inline-block mr-1" /> : <ChevronDown className="w-3 h-3 inline-block mr-1" />;
+        }
+        return <ChevronUp className="w-3 h-3 inline-block mr-1 text-gray-300 opacity-0 group-hover:opacity-100" />;
+    };
 
     const loadTransactions = async () => {
         try {
@@ -611,18 +653,18 @@ export default function BranchDashboard() {
                     <table className="w-full">
                         <thead className="bg-gray-50/50">
                             <tr>
-                                <th className="text-right p-4 text-xs font-bold text-gray-500">التاريخ</th>
-                                <th className="text-right p-4 text-xs font-bold text-gray-500">الفرع</th>
-                                <th className="text-right p-4 text-xs font-bold text-gray-500">البنك</th>
-                                <th className="text-right p-4 text-xs font-bold text-gray-500">المبلغ</th>
-                                <th className="text-right p-4 text-xs font-bold text-gray-500">الربح</th>
-                                <th className="text-right p-4 text-xs font-bold text-gray-500">الصافي</th>
-                                <th className="text-right p-4 text-xs font-bold text-gray-500">الحالة</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('settlementDate')}>التاريخ {renderSortIcon('settlementDate')}</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('branchName')}>الفرع {renderSortIcon('branchName')}</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('bankName')}>البنك {renderSortIcon('bankName')}</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('totalAmount')}>المبلغ {renderSortIcon('totalAmount')}</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('fees')}>الربح {renderSortIcon('fees')}</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('netAmount')}>الصافي {renderSortIcon('netAmount')}</th>
+                                <th className="text-right p-4 text-xs font-bold text-gray-500 cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => requestSort('status')}>الحالة {renderSortIcon('status')}</th>
                                 <th className="text-center p-4 text-xs font-bold text-gray-500 w-24">صورة</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {transactions.map((tx: any) => (
+                            {sortedTransactions.map((tx: any) => (
                                 <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
                                     <td className="p-4 text-sm font-bold text-gray-700">
                                         {format(new Date(tx.settlementDate), 'yyyy/MM/dd')}

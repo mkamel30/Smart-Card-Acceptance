@@ -112,6 +112,16 @@ export default function SettlementWorkFlow() {
             if (state.imageUrl) setReceiptImageUrl(state.imageUrl);
             // Clear the state to prevent re-applying on refresh
             window.history.replaceState({}, document.title);
+        } else if (state?.prefill) {
+            if (state.prefill.batchNumber) setValue('batchNumber', state.prefill.batchNumber);
+            if (state.prefill.settlementDate) {
+                // Ensure date format is correct for datetime-local
+                const dateObj = new Date(state.prefill.settlementDate);
+                if (!isNaN(dateObj.getTime())) {
+                    setValue('settlementDate', dateObj.toISOString().slice(0, 16));
+                }
+            }
+            window.history.replaceState({}, document.title);
         }
     }, [location.state]);
 
