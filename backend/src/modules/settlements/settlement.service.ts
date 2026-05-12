@@ -246,6 +246,26 @@ export class SettlementService {
         console.log(`[SettlementService] Successfully updated ${updatedCount} settlements.`);
         return updatedCount;
     }
+
+    // Update batch number and/or settlement date for all transactions in a batch
+    async updateBatch(batchNumber: string, data: { newBatchNumber?: string, newSettlementDate?: string }) {
+        const { newBatchNumber, newSettlementDate } = data;
+        const updateData: any = {};
+        
+        if (newBatchNumber) updateData.batchNumber = newBatchNumber;
+        if (newSettlementDate) updateData.settlementDate = new Date(newSettlementDate);
+
+        const result = await prisma.settlement.updateMany({
+            where: { batchNumber },
+            data: updateData,
+        });
+
+        return {
+            updatedCount: result.count,
+            newBatchNumber: newBatchNumber || batchNumber,
+            newSettlementDate: newSettlementDate,
+        };
+    }
 }
 
 export default new SettlementService();

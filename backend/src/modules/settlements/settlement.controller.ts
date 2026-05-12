@@ -89,9 +89,34 @@ export class SettlementController {
     async update(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
-            const validatedData = UpdateSettlementSchema.parse(req.body);
-            const settlement = await settlementService.updateSettlement(id, validatedData);
+            console.log(`[SettlementController] Updating settlement ${id} with body:`, JSON.stringify(req.body, null, 2));
+            
+            const validationResult = UpdateSettlementSchema.safeParse(req.body);
+            if (!validationResult.success) {
+                console.error('[SettlementController] Validation Error:', JSON.stringify(validationResult.error.errors, null, 2));
+                return res.status(400).json({
+                    message: 'Validation error',
+                    errors: validationResult.error.errors
+                });
+            }
+
+            const settlement = await settlementService.updateSettlement(id, validationResult.data);
             res.json(settlement);
+        } catch (error: any) {
+            console.error('[SettlementController] Update Error:', error.message || error);
+            next(error);
+        }
+    }
+
+    async updateBatch(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { batchNumber } = req.params;
+            const { newBatchNumber, newSettlementDate } = req.body;
+            
+            console.log(`[SettlementController] Updating batch ${batchNumber} to:`, { newBatchNumber, newSettlementDate });
+            
+            const result = await settlementService.updateBatch(batchNumber, { newBatchNumber, newSettlementDate });
+            res.json(result);
         } catch (error) {
             next(error);
         }
