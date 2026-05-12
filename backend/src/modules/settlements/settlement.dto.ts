@@ -72,9 +72,7 @@ export const CreateSettlementSchema = z.object({
         .optional(),
 });
 
-export const UpdateSettlementSchema = CreateSettlementSchema.partial().extend({
-    id: z.string().min(1, 'Invalid settlement ID')
-});
+export const UpdateSettlementSchema = CreateSettlementSchema.partial();
 
 export const SettlementStatusSchema = z.enum(['PENDING', 'APPROVED', 'SETTLED', 'REJECTED', 'CANCELLED']);
 
