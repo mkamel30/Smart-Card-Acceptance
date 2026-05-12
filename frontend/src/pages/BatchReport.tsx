@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Printer, ArrowRight, Trash2, Edit2, Image, Plus, CheckSquare, Settings } from 'lucide-react';
+import { Printer, ArrowRight, Trash2, Edit2, Image, Plus, Settings } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import EditSettlementModal from '@/components/EditSettlementModal';
 import api from '@/api/client';
