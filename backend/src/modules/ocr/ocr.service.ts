@@ -133,21 +133,29 @@ export class OCRService {
         if (!model) return null;
 
         try {
+            let processedBase64 = '';
+            let mimeType = 'image/jpeg';
 
-            // Preprocess image for better quality
-            const processedBuffer = await sharp(buffer)
-                .rotate()
-                .resize({ width: 2000, withoutEnlargement: true })
-                .toFormat('png')
-                .toBuffer();
-            const processedBase64 = processedBuffer.toString('base64');
+            try {
+                // Preprocess image for better quality & orientation
+                const processedBuffer = await sharp(buffer)
+                    .rotate()
+                    .resize({ width: 2000, withoutEnlargement: true })
+                    .jpeg({ quality: 85 })
+                    .toBuffer();
+                processedBase64 = processedBuffer.toString('base64');
+            } catch (sharpErr: any) {
+                console.warn('OCR: Sharp preprocess skipped, using raw buffer:', sharpErr.message);
+                processedBase64 = buffer.toString('base64');
+                mimeType = 'image/jpeg';
+            }
 
             const result = await model.generateContent([
                 GEMINI_RECEIPT_PROMPT,
                 {
                     inlineData: {
                         data: processedBase64,
-                        mimeType: 'image/png'
+                        mimeType: mimeType
                     }
                 }
             ]);
