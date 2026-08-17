@@ -107,7 +107,15 @@ export class SettlementService {
         const [data, total] = await Promise.all([
             prisma.settlement.findMany({
                 where: filters,
-                include: { receipt: true },
+                include: { 
+                    receipt: {
+                        select: {
+                            id: true,
+                            imageUrl: true,
+                            processingStatus: true
+                        }
+                    } 
+                },
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
@@ -116,7 +124,7 @@ export class SettlementService {
         ]);
 
         return {
-            data: data as SettlementWithReceipt[],
+            data: data as unknown as SettlementWithReceipt[],
             pagination: {
                 total,
                 page,
@@ -177,7 +185,15 @@ export class SettlementService {
 
         const settlements = await prisma.settlement.findMany({
             where,
-            include: { receipt: true },
+            include: { 
+                receipt: {
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                        processingStatus: true
+                    }
+                } 
+            },
             orderBy: [{ batchNumber: 'desc' }, { createdAt: 'desc' }],
         });
 

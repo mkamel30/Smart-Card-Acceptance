@@ -62,6 +62,10 @@ model Settlement {
   @@index([status])
   @@index([bankName])
   @@index([serviceCategory])
+  @@index([branchId])
+  @@index([batchNumber])
+  @@index([createdAt])
+  @@index([batchNumber, approvalNumber, last4Digits])
 }
 
 model Receipt {
