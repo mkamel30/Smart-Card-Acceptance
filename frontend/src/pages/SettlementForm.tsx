@@ -233,14 +233,8 @@ export default function SettlementWorkFlow() {
         setEntryMode('manual');
         if (ocrData.batchNumber) setValue('batchNumber', ocrData.batchNumber);
         if (ocrData.approvalNumber) setValue('approvalNumber', ocrData.approvalNumber);
-        if (ocrData.merchantCode) setValue('merchantCode', ocrData.merchantCode);
-        if (ocrData.merchantName) setValue('merchantName', ocrData.merchantName);
-        if (ocrData.rrn) setValue('referenceNumber', ocrData.rrn);
-        else if (ocrData.invoiceNumber) setValue('referenceNumber', `INV-${ocrData.invoiceNumber}`);
         if (ocrData.cardBin) setValue('cardBin', ocrData.cardBin);
         if (ocrData.last4Digits) setValue('last4Digits', ocrData.last4Digits);
-        if (ocrData.bankName) setValue('bankName', ocrData.bankName);
-        if (ocrData.serviceCategory) setValue('serviceCategory', ocrData.serviceCategory);
 
         if (ocrData.totalAmount) {
             const amount = Number(ocrData.totalAmount);
