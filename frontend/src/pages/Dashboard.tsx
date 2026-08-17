@@ -67,8 +67,14 @@ export default function Dashboard() {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            // Navigate to New Settlement with extracted data and image URL
-            navigate('/settlement/new', { state: { ocrData: res.data.data, imageUrl: res.data.imageUrl } });
+            // Navigate to New Settlement with extracted data, image URL, and ocrEngine
+            navigate('/settlement/new', { 
+                state: { 
+                    ocrData: res.data.data, 
+                    imageUrl: res.data.imageUrl,
+                    ocrEngine: res.data.engine 
+                } 
+            });
         } catch (error) {
             alert('فشل استخراج البيانات من الإيصال. يرجى إدخال البيانات يدوياً.');
             navigate('/settlement/new');

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { useLocation } from 'react-router-dom';
 import api from '@/api/client';
 import { useAdmin } from '../context/AdminContext';
-import { Zap, CheckCircle2, Loader2, Plus, Package, Download, Mail, FileSpreadsheet, Printer, Image } from 'lucide-react';
+import { Zap, CheckCircle2, Loader2, Plus, Package, Download, Mail, FileSpreadsheet, Printer, Image, Sparkles, Wrench } from 'lucide-react';
 
 const settlementSchema = z.object({
     settlementDate: z.string().min(1, 'التاريخ مطلوب'),
@@ -43,6 +43,8 @@ export default function SettlementWorkFlow() {
     const [activeTab, setActiveTab] = useState<'entry' | 'settle'>('entry');
     const [entryMode, setEntryMode] = useState<'manual' | 'ocr'>('manual');
     const [scanning, setScanning] = useState(false);
+    const [scanProgress, setScanProgress] = useState(0);
+    const [scanStage, setScanStage] = useState('');
     const [settling, setSettling] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [recentSettlements, setRecentSettlements] = useState<any[]>([]);
@@ -110,6 +112,7 @@ export default function SettlementWorkFlow() {
         if (ocrData) {
             applyOCR(ocrData);
             if (state.imageUrl) setReceiptImageUrl(state.imageUrl);
+            if (state.ocrEngine) setOcrEngine(state.ocrEngine);
             // Clear the state to prevent re-applying on refresh
             window.history.replaceState({}, document.title);
         } else if (state?.prefill) {
@@ -266,20 +269,51 @@ export default function SettlementWorkFlow() {
     const handleOCRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
         setScanning(true);
+        setScanProgress(15);
+        setScanStage('جاري تجهيز ورفع صورة الإيصال...');
+
+        const progressInterval = setInterval(() => {
+            setScanProgress(prev => {
+                if (prev < 40) {
+                    setScanStage('جاري تحليل الإيصال باستخدام الذكاء الاصطناعي (Gemini Vision)...');
+                    return prev + 10;
+                } else if (prev < 80) {
+                    setScanStage('جاري استخراج المبالغ، الباتش، التاريخ، وبيانات البطاقة...');
+                    return prev + 8;
+                } else if (prev < 94) {
+                    return prev + 2;
+                }
+                return prev;
+            });
+        }, 220);
+
         const formData = new FormData();
         formData.append('receipt', file);
         try {
             const res = await api.post('/ocr/scan', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
+            clearInterval(progressInterval);
+            setScanProgress(100);
+            setScanStage('تم استخراج البيانات بنجاح!');
             applyOCR(res.data.data);
             setOcrEngine(res.data.engine); // Save which engine was used
             if (res.data.imageUrl) setReceiptImageUrl(res.data.imageUrl);
+
+            setTimeout(() => {
+                setScanning(false);
+                setScanProgress(0);
+                setScanStage('');
+            }, 600);
         } catch (err) {
+            clearInterval(progressInterval);
+            setScanning(false);
+            setScanProgress(0);
+            setScanStage('');
             alert('فشل قراءة الإيصال، يرجى الإدخال يدوياً');
         } finally {
-            setScanning(false);
             if (e.target) e.target.value = ''; // Reset input to allow same file scan
         }
     };
@@ -419,8 +453,30 @@ export default function SettlementWorkFlow() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left: Entry Form */}
                     <div className="lg:col-span-8 bg-white p-4 lg:p-8 rounded-2xl shadow-sm border border-gray-200 order-2 lg:order-1">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                            <h2 className="text-xl font-black text-gray-800">بيانات الإيصال</h2>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <h2 className="text-xl font-black text-gray-800">بيانات الإيصال</h2>
+                                {ocrEngine && !scanning && (
+                                    <div className="animate-fade-in">
+                                        {ocrEngine.toLowerCase().includes('gemini') ? (
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-purple-50 to-indigo-50 text-indigo-700 border border-indigo-200/80 rounded-full text-xs font-bold shadow-xs">
+                                                <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+                                                <span>محرك الذكاء الاصطناعي: Gemini Flash Vision ✨</span>
+                                            </span>
+                                        ) : ocrEngine.toLowerCase().includes('tesseract') ? (
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-xs font-bold shadow-xs">
+                                                <Wrench className="w-3.5 h-3.5 text-amber-600" />
+                                                <span>محرك احتياطي: Tesseract OCR 🔧</span>
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold shadow-xs">
+                                                <span>المحرك: {ocrEngine}</span>
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex gap-2 p-1 bg-gray-100 rounded-lg w-full sm:w-auto self-end">
                                 <button
                                     onClick={() => setEntryMode('manual')}
@@ -430,27 +486,45 @@ export default function SettlementWorkFlow() {
                                 </button>
                                 <button
                                     onClick={() => imageOnlyInputRef.current?.click()}
-                                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-bold transition-all text-gray-500 hover:bg-gray-200`}
+                                    disabled={scanning}
+                                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-bold transition-all text-gray-500 hover:bg-gray-200 disabled:opacity-50`}
                                 >
                                     <Image className="w-4 h-4 inline ml-1" />
                                     {receiptImageUrl ? 'تغيير الصورة' : 'إرفاق صورة'}
                                 </button>
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
-                                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-bold transition-all ${scanning ? 'bg-primary text-white animate-pulse' : 'text-gray-500 hover:bg-gray-200'}`}
+                                    disabled={scanning}
+                                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-bold transition-all ${scanning ? 'bg-indigo-600 text-white animate-pulse' : 'text-gray-500 hover:bg-gray-200'}`}
                                 >
                                     {scanning ? <Loader2 className="w-4 h-4 animate-spin inline ml-1" /> : <Zap className="w-4 h-4 inline ml-1" />}
-                                    مسح OCR
-                                    {ocrEngine && !scanning && (
-                                        <span className="mr-2 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded border border-blue-100 animate-fade-in">
-                                            بواسطة: {ocrEngine === 'OCR.space' ? 'محرك أساسي ⚡' : 'محرك احتياطي 🔧'}
-                                        </span>
-                                    )}
+                                    {scanning ? 'جاري المسح...' : 'مسح OCR'}
                                 </button>
                             </div>
                             <input type="file" ref={fileInputRef} onChange={handleOCRUpload} className="hidden" accept="image/*" />
                             <input type="file" ref={imageOnlyInputRef} onChange={handleImageOnlyUpload} className="hidden" accept="image/*" />
                         </div>
+
+                        {/* OCR Scanning Progress Bar */}
+                        {scanning && (
+                            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-50/90 via-indigo-50/90 to-purple-50/90 border border-indigo-100/90 shadow-sm animate-fade-in">
+                                <div className="flex justify-between items-center mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Loader2 className="w-4 h-4 text-indigo-600 animate-spin flex-shrink-0" />
+                                        <span className="text-sm font-bold text-indigo-900">{scanStage}</span>
+                                    </div>
+                                    <span className="text-xs font-black text-indigo-700 bg-white/90 px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
+                                        {scanProgress}%
+                                    </span>
+                                </div>
+                                <div className="w-full bg-indigo-100/70 rounded-full h-2.5 overflow-hidden">
+                                    <div
+                                        className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 h-2.5 rounded-full transition-all duration-300 ease-out shadow-xs"
+                                        style={{ width: `${scanProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
