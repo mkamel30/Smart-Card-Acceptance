@@ -65,8 +65,8 @@ export class OCRService {
 
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            this.geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-            console.log('OCR: Gemini Flash Vision model initialized');
+            this.geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+            console.log('OCR: Gemini 2.5 Flash Vision model initialized');
             return this.geminiModel;
         } catch (e: any) {
             console.error('OCR: Failed to initialize Gemini:', e.message);
