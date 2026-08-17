@@ -221,6 +221,28 @@ export class SettlementService {
         };
     }
 
+    // Delete all transactions in a batch
+    async deleteBatch(batchNumber: string) {
+        return await prisma.settlement.deleteMany({
+            where: { batchNumber },
+        });
+    }
+
+    // Update batch details (like changing batchNumber or date for all)
+    async updateBatch(oldBatchNumber: string, updates: { batchNumber?: string, settlementDate?: Date }) {
+        return await prisma.settlement.updateMany({
+            where: { batchNumber: oldBatchNumber },
+            data: updates as any,
+        });
+    }
+
+    // Bulk delete specific settlements
+    async bulkDelete(ids: string[]) {
+        return await prisma.settlement.deleteMany({
+            where: { id: { in: ids } },
+        });
+    }
+
     // Sync historical data: recalculate fees for entries where fees are 0
     async syncHistoricalFees() {
         console.log('[SettlementService] Syncing and correcting all fees...');

@@ -302,8 +302,8 @@ export default function SettlementWorkFlow() {
 
     const onSubmit = async (data: SettlementFormValues) => {
         try {
-            // Clean data
-            const payload = {
+            // Clean data and default fields
+            const payload: any = {
                 ...data,
                 totalAmount: data.settledAmount, // Sync if empty
                 netAmount: data.settledAmount,
@@ -311,7 +311,16 @@ export default function SettlementWorkFlow() {
                 branchId: localStorage.getItem('selectedBranchId') || undefined, // Attach Branch ID
                 receiptImageUrl: receiptImageUrl || undefined,
             };
-            await api.post('/settlements', payload);
+
+            // Clean empty strings to undefined to make Zod treat them as optional
+            const cleanedPayload = Object.fromEntries(
+                Object.entries(payload).map(([key, value]) => [
+                    key,
+                    value === "" ? undefined : value
+                ])
+            );
+
+            await api.post('/settlements', cleanedPayload);
             alert('تم حفظ الإيصال بنجاح');
             // Full reset to default values
             reset({
@@ -330,8 +339,11 @@ export default function SettlementWorkFlow() {
             });
             setReceiptImageUrl('');
             fetchRecent();
-        } catch (err) {
-            alert('خطأ أثناء الحفظ');
+        } catch (err: any) {
+            console.error('Save settlement error:', err);
+            const errMsg = err.response?.data?.message || 'خطأ أثناء الحفظ';
+            const details = err.response?.data?.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('\n') || '';
+            alert(details ? `${errMsg}:\n${details}` : errMsg);
         }
     };
 

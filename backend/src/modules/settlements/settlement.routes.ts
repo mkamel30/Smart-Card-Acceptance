@@ -23,6 +23,9 @@ router.post('/bulk-delete', unifiedAdminAuthWithRateLimit, settlementController.
 router.get('/sync/fees', unifiedAdminAuthWithRateLimit, settlementController.syncFees);
 router.put('/:id', unifiedAdminAuthWithRateLimit, settlementController.update);
 router.patch('/:id/status', unifiedAdminAuthWithRateLimit, settlementController.updateStatus);
+router.post('/bulk-delete', unifiedAdminAuthWithRateLimit, settlementController.bulkDelete);
+router.delete('/batches/:batchNumber', unifiedAdminAuthWithRateLimit, settlementController.deleteBatch);
+router.put('/batches/:batchNumber', unifiedAdminAuthWithRateLimit, settlementController.updateBatch);
 router.delete('/:id', unifiedAdminAuthWithRateLimit, settlementController.delete);
 
 

@@ -34,15 +34,28 @@ export default function EditSettlementModal({ isOpen, onClose, settlement, onSav
         e.preventDefault();
         setLoading(true);
         try {
-            await api.put(`/settlements/${settlement.id}`, {
+            const payload = {
                 ...formData,
                 settledAmount: Number(formData.settledAmount),
                 fees: Number(formData.fees)
-            });
+            };
+
+            // Clean empty strings to undefined to make Zod treat them as optional
+            const cleanedPayload = Object.fromEntries(
+                Object.entries(payload).map(([key, value]) => [
+                    key,
+                    value === "" ? undefined : value
+                ])
+            );
+
+            await api.put(`/settlements/${settlement.id}`, cleanedPayload);
             onSave();
             onClose();
-        } catch (error) {
-            alert('فشل حفظ التعديلات');
+        } catch (error: any) {
+            console.error('Update settlement error:', error);
+            const errMsg = error.response?.data?.message || 'فشل حفظ التعديلات';
+            const details = error.response?.data?.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('\n') || '';
+            alert(details ? `${errMsg}:\n${details}` : errMsg);
         } finally {
             setLoading(false);
         }

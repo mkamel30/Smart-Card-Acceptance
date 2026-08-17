@@ -207,6 +207,45 @@ export class SettlementController {
         }
     }
 
+    async deleteBatch(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { batchNumber } = req.params;
+            const result = await settlementService.deleteBatch(batchNumber);
+            res.json({ message: 'تم حذف الباتش بنجاح', count: result.count });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async updateBatch(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { batchNumber } = req.params;
+            const { newBatchNumber, newSettlementDate } = req.body;
+            
+            const updates: any = {};
+            if (newBatchNumber) updates.batchNumber = newBatchNumber;
+            if (newSettlementDate) updates.settlementDate = new Date(newSettlementDate);
+
+            const result = await settlementService.updateBatch(batchNumber, updates);
+            res.json({ message: 'تم التحديث بنجاح', count: result.count });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async bulkDelete(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { ids } = req.body;
+            if (!ids || !Array.isArray(ids) || ids.length === 0) {
+                return res.status(400).json({ error: 'يجب تقديم مصفوفة من المعرفات للحذف' });
+            }
+            const result = await settlementService.bulkDelete(ids);
+            res.json({ message: 'تم الحذف بنجاح', count: result.count });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async syncFees(_req: Request, res: Response, next: NextFunction) {
         try {
             console.log('[SettlementController] Starting syncFees process...');
