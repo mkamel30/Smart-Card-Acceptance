@@ -162,13 +162,16 @@ export class OCRService {
             }
         }
 
-        // 2. BATCH NUMBER (Resilient matching for O/0 and I/1)
-        // e.g. "BATCH NO.000085", "BATCH NO: 000085", "BATCH: 000085", "BATCH OOOO85"
-        const batchLine = cleanText.match(/BATCH[^\n\r]{0,30}/i);
+        // 2. BATCH NUMBER (Resilient matching for O/0, I/1, S/5, B/8)
+        // e.g. "BATCH NO.000085", "BATCH NO: 000085", "BATCH: 000085", "BATCH OOOO8S"
+        const batchLine = cleanText.match(/BATCH[^\n\r]{0,35}/i);
         if (batchLine) {
             const normalized = batchLine[0]
                 .replace(/[OoD]/g, '0')
-                .replace(/[Il|!\]\[]/g, '1');
+                .replace(/[Il|!\]\[]/g, '1')
+                .replace(/[Ss]/g, '5')
+                .replace(/[Bb]/g, '8')
+                .replace(/[Gg]/g, '9');
             const num = normalized.match(/(\d{4,6})/);
             if (num) {
                 data.batchNumber = num[1].padStart(6, '0');
@@ -177,12 +180,14 @@ export class OCRService {
 
         // 3. APPROVAL NUMBER (AUTH CODE / APPROVAL)
         // e.g. "AUTH CODE:215757", "AUTH CODE: 215757", "AUTH: 215757", "APPROVAL: 215757"
-        const authLine = cleanText.match(/(?:AUTH\s*CODE|AUTH|APPROVAL|APPROV|APPR|موافقة|الموافقة)[^\n\r]{0,30}/i);
+        const authLine = cleanText.match(/(?:AUTH\s*CODE|AUTH|APPROVAL|APPROV|APPR|موافقة|الموافقة)[^\n\r]{0,35}/i);
         if (authLine) {
             const normalized = authLine[0]
                 .replace(/[OoD]/g, '0')
                 .replace(/[Il|!\]\[]/g, '1')
-                .replace(/[Ss]/g, '5');
+                .replace(/[Ss]/g, '5')
+                .replace(/[Bb]/g, '8')
+                .replace(/[Gg]/g, '9');
             const num = normalized.match(/(\d{4,8})/);
             if (num) {
                 data.approvalNumber = num[1];
@@ -206,25 +211,61 @@ export class OCRService {
         }
 
         // 5. DATE & TIME
-        // e.g. "DATE:09/08/2026", "09/08/2026", "DATE: O9/O8/2026"
-        const dateMatch = cleanText.match(/(?:DATE|التاريخ)?[^\n\r]{0,10}\b([0-3]?[0-9Oo][/\-\.][0-1]?[0-9Oo][/\-\.](?:20)?[0-9Oo]{2})\b/i);
-        if (dateMatch) {
-            const cleanedDateStr = dateMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1');
-            const parts = cleanedDateStr.split(/[/\-\.]/);
-            if (parts.length === 3) {
-                const day = parts[0].padStart(2, '0');
-                const month = parts[1].padStart(2, '0');
-                let year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+        // Dedicated DATE line extraction e.g. "DATE:09/08/2026" or "DATE: 09/08/2026"
+        const dateLine = cleanText.match(/DATE[^\n\r]{0,35}/i);
+        if (dateLine) {
+            const normalized = dateLine[0]
+                .replace(/[OoD]/g, '0')
+                .replace(/[Il|!\\]/g, '/');
+            const match = normalized.match(/([0-3]?\d)[\/\-\.]([0-1]?\d)[\/\-\.]((?:20)?\d{2,4})/);
+            if (match) {
+                const day = match[1].padStart(2, '0');
+                const month = match[2].padStart(2, '0');
+                let year = match[3].length === 2 ? `20${match[3]}` : match[3];
                 if (year === '2076') year = '2026';
                 data.date = `${year}-${month}-${day}`;
             }
         }
 
-        // e.g. "TIME:09:58:59", "09:58:59", "TIME: O9:58:59"
-        const timeMatch = cleanText.match(/(?:TIME|الوقت)?[^\n\r]{0,10}\b([0-2]?[0-9Oo]:[0-5][0-9Oo](?::[0-5][0-9Oo])?)\b/i);
-        if (timeMatch) {
-            const cleanedTimeStr = timeMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1');
-            data.time = cleanedTimeStr.length === 5 ? `${cleanedTimeStr}:00` : cleanedTimeStr;
+        // Fallback for DATE anywhere in text
+        if (!data.date) {
+            const dateMatch = cleanText.match(/\b([0-3]?[0-9Oo][/\-\.][0-1]?[0-9Oo][/\-\.](?:20)?[0-9Oo]{2,4})\b/);
+            if (dateMatch) {
+                const cleanedDateStr = dateMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1');
+                const parts = cleanedDateStr.split(/[/\-\.]/);
+                if (parts.length === 3) {
+                    const day = parts[0].padStart(2, '0');
+                    const month = parts[1].padStart(2, '0');
+                    let year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+                    if (year === '2076') year = '2026';
+                    data.date = `${year}-${month}-${day}`;
+                }
+            }
+        }
+
+        // Dedicated TIME line extraction e.g. "TIME:09:58:59" or "TIME: 09:58:59"
+        const timeLine = cleanText.match(/TIME[^\n\r]{0,35}/i);
+        if (timeLine) {
+            const normalized = timeLine[0]
+                .replace(/[OoD]/g, '0')
+                .replace(/[Ss]/g, '5')
+                .replace(/[Bb]/g, '8');
+            const match = normalized.match(/([0-2]?\d):([0-5]\d)(?::([0-5]\d))?/);
+            if (match) {
+                const hh = match[1].padStart(2, '0');
+                const mm = match[2].padStart(2, '0');
+                const ss = (match[3] || '00').padStart(2, '0');
+                data.time = `${hh}:${mm}:${ss}`;
+            }
+        }
+
+        // Fallback for TIME anywhere in text
+        if (!data.time) {
+            const timeMatch = cleanText.match(/\b([0-2]?[0-9Oo]:[0-5][0-9Oo](?::[0-5][0-9Oo])?)\b/);
+            if (timeMatch) {
+                const cleanedTimeStr = timeMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1');
+                data.time = cleanedTimeStr.length === 5 ? `${cleanedTimeStr}:00` : cleanedTimeStr;
+            }
         }
 
         return data;
