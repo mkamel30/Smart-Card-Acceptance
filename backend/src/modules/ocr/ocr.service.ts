@@ -14,6 +14,7 @@ export interface ExtractedReceiptData {
     cardBin?: string;
     last4Digits?: string;
     cardType?: string;
+    serviceCategory?: string;
     bankName?: string;
     date?: string;
     time?: string;
@@ -137,8 +138,10 @@ export class OCRService {
 
     private parseReceiptText(text: string): ExtractedReceiptData {
         const data: ExtractedReceiptData = {};
-        const cleanText = text.replace(/[\r\n]+/g, '\n').replace(/[I|l|i]/g, '1');
-        const digitFocusText = cleanText.replace(/(\d)\s+(?=\d|[.,]\d)/g, '$1');
+        // Replace visual noise
+        const cleanText = text.replace(/[\r\n]+/g, '\n').replace(/[I|l|i](?=\d)/g, '1');
+        // Compact numbers with spaces e.g. "09 / 08 / 2026" or "4897 052 009"
+        const digitFocusText = cleanText.replace(/(\d)\s+(?=\d|[.,/:\-]\d)/g, '$1');
         const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
 
         const cleanAmount = (str: string) => parseFloat(str.replace(/,/g, ''));
@@ -163,102 +166,113 @@ export class OCRService {
             data.cardType = 'Visa';
         }
 
-        // 3. AMOUNT LOGIC
-        // Pick the correct net amount among detected numbers
-        const allAmounts = digitFocusText.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/g);
-        if (allAmounts) {
-            const vals = Array.from(new Set(allAmounts.map(v => cleanAmount(v))))
-                .filter(v => v > 0.5)
-                .sort((a, b) => b - a); // Descending
-
-            if (vals.length >= 3) {
-                // If 3+ numbers: usually [Total, Net, Fee] -> Pick the middle one as Net/Settled
-                data.totalAmount = vals[1];
-            } else if (vals.length > 0) {
-                // If 1 or 2 found, pick the smaller one as Net if multiple, else the one found
-                data.totalAmount = Math.min(...vals);
-            }
+        // 3. SERVICE CATEGORY
+        if (/SMART|سمارت/i.test(text)) {
+            data.serviceCategory = 'SMART';
+        } else if (/TAMWEEN|تموين/i.test(text)) {
+            data.serviceCategory = 'TAMWEEN';
         }
 
-        // 4. CARD PAN (BIN & Last 4 digits)
-        const globalBinMatch = digitFocusText.match(/\b(\d{6})[\*xX\s\-\.]{4,}/);
-        if (globalBinMatch) data.cardBin = globalBinMatch[1];
+        // 4. AMOUNT LOGIC
+        // Check for specific "AMOUNT EGP 350.00" (avoid T.AMOUNT which is total)
+        const specificAmountMatch = digitFocusText.match(/(?:^|\n|[\s])AMOUNT[\s\.:#]*(?:EGP|ج\.م|LE)?\s*(\d{1,6}(?:\.\d{2})?)/i);
+        if (specificAmountMatch) {
+            data.totalAmount = parseFloat(specificAmountMatch[1]);
+        } else {
+            // Fallback: pick the net amount (middle if 3 numbers found)
+            const allAmounts = digitFocusText.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/g);
+            if (allAmounts) {
+                const vals = Array.from(new Set(allAmounts.map(v => cleanAmount(v))))
+                    .filter(v => v > 0.5)
+                    .sort((a, b) => b - a);
 
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].toUpperCase().includes('SALE') || lines[i].includes('شراء') || lines[i].includes('بطاقة')) {
-                for (let j = i; j < Math.min(i + 4, lines.length); j++) {
-                    const l = lines[j];
-                    if (l.length < 4) continue;
-                    let endPart = l.slice(-10).replace(/\s/g, '');
-                    let numericEnd = endPart.replace(/G/g, '9').replace(/S/g, '5').replace(/O/g, '0').match(/\d{4}$/);
-                    if (numericEnd) {
-                        data.last4Digits = numericEnd[0];
-                        if (!data.cardBin) data.cardBin = '000000';
-                        break;
-                    }
+                if (vals.length >= 3) {
+                    data.totalAmount = vals[1]; // Net amount
+                } else if (vals.length > 0) {
+                    data.totalAmount = Math.min(...vals);
                 }
-                if (data.last4Digits) break;
             }
         }
 
-        // Fallback for last 4 digits anywhere in masked card line
+        // 5. CARD PAN (BIN & Last 4 digits) - e.g. 422322******8150 or 422322****8150
+        const panMatch = digitFocusText.match(/\b([459]\d{5})[\*xX\s\-\.]{4,8}(\d{4})\b/);
+        if (panMatch) {
+            data.cardBin = panMatch[1];
+            data.last4Digits = panMatch[2];
+        } else {
+            const anyPan = digitFocusText.match(/\b(\d{6})[\*xX\s\-\.]{4,8}(\d{4})\b/);
+            if (anyPan) {
+                data.cardBin = anyPan[1];
+                data.last4Digits = anyPan[2];
+            }
+        }
+
+        // Fallbacks for BIN and last 4 if not matched together
         if (!data.last4Digits) {
-            const cardLineMatch = digitFocusText.match(/[\*xX]{4,}[\s\-]*(\d{4})/);
-            if (cardLineMatch) {
-                data.last4Digits = cardLineMatch[1];
-            }
+            const last4Match = digitFocusText.match(/[\*xX]{4,}[\s\-]*(\d{4})/);
+            if (last4Match) data.last4Digits = last4Match[1];
+        }
+        if (!data.cardBin) {
+            const binMatch = digitFocusText.match(/\b([459]\d{5})[\*xX]/);
+            if (binMatch) data.cardBin = binMatch[1];
         }
 
-        // 5. BATCH & AUTH (Strict digits)
-        const batchMatch = digitFocusText.match(/(?:BATCH|BATC|ATCH|باتش)[\s\S]{0,20}?(\d{4,6})/i);
+        // 6. BATCH & AUTH (Strict patterns)
+        // e.g. BATCH NO.000085 or BATCH: 000085 or BATCH 000085
+        const batchMatch = digitFocusText.match(/(?:BATCH\s*NO|BATCH\s*#|BATCH|BATC|ATCH|باتش)[\s\.:#]*(\d{4,6})/i);
         if (batchMatch) {
             data.batchNumber = batchMatch[1].padStart(6, '0');
         }
 
-        const authMatch = digitFocusText.match(/(?:AUTH|APPR|APPROVAL|الموافقة|موافقة)[\s\S]{0,20}?(\d{4,8})/i);
+        // e.g. AUTH CODE:215757 or AUTH: 215757 or APPROVAL: 215757
+        const authMatch = digitFocusText.match(/(?:AUTH\s*CODE|AUTH\s*#|AUTH|APPROVAL|APPR|موافقة|الموافقة|كود\s*الموافقة)[\s\.:#]*([0-9]{4,8})/i);
         if (authMatch) {
             data.approvalNumber = authMatch[1];
         }
 
-        // 6. RRN & INVOICE
-        const rrnMatch = digitFocusText.match(/(?:RRN|REF|REFERENCE|مرجع)[\s\.:#]*(\d{8,12})/i);
-        if (rrnMatch) data.rrn = rrnMatch[1];
-
-        const invMatch = digitFocusText.match(/(?:INV|INVOICE|فاتورة)[\s\.:#]*(\d{4,8})/i);
-        if (invMatch) data.invoiceNumber = invMatch[1];
-
         // 7. TERMINAL ID (TID) & MERCHANT CODE (MID)
+        // e.g. TID:85174124
         const tidMatch = digitFocusText.match(/(?:TID|TERM|TERMINAL)[\s\.:#]*(\d{8})/i);
         if (tidMatch) data.terminalId = tidMatch[1];
 
-        const midMatch = digitFocusText.match(/(?:MID|MIC|MERCHANT|تاجر)[\s\.:#]*(\d{8,15})/i);
-        if (midMatch) data.merchantCode = midMatch[1];
-
-        if (!data.merchantCode) {
-            const anyLongNum = digitFocusText.match(/\b\d{10,15}\b/);
-            if (anyLongNum) data.merchantCode = anyLongNum[0];
+        // e.g. MID:4897052009 (Must start with non-zero digit to avoid AID/TVR zeroes!)
+        const midMatch = digitFocusText.match(/(?:MID|MIC|MERCHANT\s*ID|MERCHANT|تاجر)[\s\.:#]*([1-9]\d{7,14})/i);
+        if (midMatch) {
+            data.merchantCode = midMatch[1];
         }
 
-        // 8. MERCHANT NAME (Look at the top 4 lines for store/merchant name)
-        for (let i = 0; i < Math.min(4, lines.length); i++) {
-            const candidate = lines[i];
-            // Skip bank names or common POS header labels
-            if (!/BANQUE|BANK|NBE|CIB|QNB|بنك|POS|PURCHASE|SALE|VERIFONE|INGENICO/i.test(candidate) && candidate.length > 3) {
-                data.merchantName = candidate;
-                break;
+        // 8. RRN, INVOICE, STAN
+        // e.g. RECEIPT #:000222 or RRN: 123456789012 or STAN: 000248
+        const rrnMatch = digitFocusText.match(/(?:RRN|REF|REFERENCE|مرجع)[\s\.:#]*(\d{8,12})/i);
+        if (rrnMatch) data.rrn = rrnMatch[1];
+
+        const invMatch = digitFocusText.match(/(?:RECEIPT\s*#|RECEIPT|INV|INVOICE|فاتورة|STAN)[\s\.:#]*(\d{4,8})/i);
+        if (invMatch) data.invoiceNumber = invMatch[1];
+
+        // 9. MERCHANT NAME
+        for (const line of lines) {
+            // Find store name below bank header, skip purely technical/banking words and zero numbers
+            if (!/BANQUE|MISR|BANK|NBE|CIB|QNB|بنك|POS|PURCHASE|SALE|VERIFONE|INGENICO|COPY|MERCHANT|TID|MID|DATE|TIME|AUTH|BATCH|^0+$/i.test(line)) {
+                if (line.length > 3 && !/^\d+$/.test(line)) {
+                    data.merchantName = line;
+                    break;
+                }
             }
         }
 
-        // 9. DATE & TIME
-        const dateMatch = digitFocusText.match(/\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\b/);
+        // 10. DATE & TIME
+        // e.g. DATE:09/08/2026 or 09/08/2026
+        const dateMatch = digitFocusText.match(/(?:DATE|التاريخ)?[\s\.:#]*\b([0-3]?\d)[/\-\.]([0-1]?\d)[/\-\.]((?:20)?\d{2})\b/i);
         if (dateMatch) {
-            const parts = dateMatch[1].split(/[/\-\.]/);
-            let year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+            const day = dateMatch[1].padStart(2, '0');
+            const month = dateMatch[2].padStart(2, '0');
+            let year = dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3];
             if (year === '2076') year = '2026';
-            data.date = `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            data.date = `${year}-${month}-${day}`;
         }
 
-        const timeMatch = digitFocusText.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
+        // e.g. TIME:09:58:59 or 09:58:59
+        const timeMatch = digitFocusText.match(/(?:TIME|الوقت)?[\s\.:#]*\b([0-2]?\d:[0-5]\d(?::[0-5]\d)?)\b/i);
         if (timeMatch) {
             data.time = timeMatch[1].length === 5 ? `${timeMatch[1]}:00` : timeMatch[1];
         }

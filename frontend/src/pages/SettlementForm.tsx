@@ -240,6 +240,7 @@ export default function SettlementWorkFlow() {
         if (ocrData.cardBin) setValue('cardBin', ocrData.cardBin);
         if (ocrData.last4Digits) setValue('last4Digits', ocrData.last4Digits);
         if (ocrData.bankName) setValue('bankName', ocrData.bankName);
+        if (ocrData.serviceCategory) setValue('serviceCategory', ocrData.serviceCategory);
 
         if (ocrData.totalAmount) {
             const amount = Number(ocrData.totalAmount);
