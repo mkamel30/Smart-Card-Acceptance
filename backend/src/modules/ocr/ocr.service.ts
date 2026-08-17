@@ -33,10 +33,11 @@ export class OCRService {
         if (this.workerPromise) return this.workerPromise;
 
         this.workerPromise = (async () => {
-            console.log('OCR: Initializing persistent Tesseract Worker...');
-            const worker = await Tesseract.createWorker(['eng', 'ara']);
+            console.log('OCR: Initializing persistent English Tesseract Worker...');
+            // Strictly 'eng' to prevent Arabic RTL engine from mangling English numbers/dates
+            const worker = await Tesseract.createWorker('eng');
             await worker.setParameters({
-                tessedit_pagesegmode: '4' as any // Single column of variable text sizes - optimal for thermal POS
+                tessedit_pagesegmode: '6' as any // Assume a single uniform block of text
             });
             this.worker = worker;
             return worker;
@@ -51,6 +52,7 @@ export class OCRService {
 
         try {
             storageBuffer = await sharp(file.buffer)
+                .rotate()
                 .resize({ width: 1000, withoutEnlargement: true })
                 .webp({ quality: 75 })
                 .toBuffer();
@@ -85,13 +87,13 @@ export class OCRService {
             throw new Error('Invalid or too small image');
         }
 
-        // Image pre-processing: High clarity and contrast for thermal dot-matrix numbers
+        // Image pre-processing: Auto-rotate EXIF, Grayscale, Normalize, Sharpen
         const processedBuffer = await image
-            .resize({ width: 2400, withoutEnlargement: true })
+            .rotate()
+            .resize({ width: 2200, withoutEnlargement: true })
             .grayscale()
             .normalize()
-            .linear(1.3, -12) // Enhance ink contrast
-            .sharpen({ sigma: 1.2 })
+            .sharpen()
             .toFormat('png')
             .toBuffer();
 
