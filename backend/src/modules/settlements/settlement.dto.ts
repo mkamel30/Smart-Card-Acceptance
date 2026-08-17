@@ -82,15 +82,15 @@ export const SettlementFilterSchema = z.object({
     branchId: z.string().optional(),
     status: SettlementStatusSchema.optional(),
     serviceCategory: ServiceCategorySchema.optional(),
-    dateFrom: z.string().datetime().optional(),
-    dateTo: z.string().datetime().optional(),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
     bankName: z.string().optional(),
     merchantCode: z.string().optional(),
-    page: z.number().int().positive().optional().default(1),
-    limit: z.number().int().positive().max(100).optional().default(20),
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().max(500).optional().default(20),
     sortBy: z.enum(['createdAt', 'settlementDate', 'totalAmount']).optional().default('createdAt'),
     sortOrder: z.enum(['asc', 'desc']).optional().default('desc')
-});
+}).passthrough();
 
 // Branch creation and validation schemas
 export const CreateBranchSchema = z.object({
@@ -111,10 +111,11 @@ export const UpdateBranchSchema = CreateBranchSchema.partial().extend({
 export const BranchFilterSchema = z.object({
     name: z.string().optional(),
     code: z.string().optional(),
-    active: z.boolean().optional(),
-    page: z.number().int().positive().optional().default(1),
-    limit: z.number().int().positive().max(100).optional().default(20)
-});
+    branchId: z.string().optional(),
+    active: z.boolean().or(z.string()).optional(),
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().max(1000).optional().default(100)
+}).passthrough();
 
 // OCR Request validation
 export const OCRRequestSchema = z.object({
