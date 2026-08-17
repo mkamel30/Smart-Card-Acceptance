@@ -131,20 +131,6 @@ export class SettlementController {
         }
     }
 
-    async updateBatch(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { batchNumber } = req.params;
-            const { newBatchNumber, newSettlementDate } = req.body;
-            
-            console.log(`[SettlementController] Updating batch ${batchNumber} to:`, { newBatchNumber, newSettlementDate });
-            
-            const result = await settlementService.updateBatch(batchNumber, { newBatchNumber, newSettlementDate });
-            res.json(result);
-        } catch (error) {
-            next(error);
-        }
-    }
-
     async updateStatus(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
@@ -161,31 +147,6 @@ export class SettlementController {
         try {
             const { id } = req.params;
             await settlementService.deleteSettlement(id);
-            res.status(204).send();
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    async deleteBatch(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { batchNumber } = req.params;
-            console.log(`[SettlementController] Deleting batch ${batchNumber}`);
-            await settlementService.deleteBatch(batchNumber);
-            res.status(204).send();
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    async bulkDelete(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { ids } = req.body;
-            console.log(`[SettlementController] Bulk deleting ${ids?.length} transactions`);
-            if (!Array.isArray(ids) || ids.length === 0) {
-                return res.status(400).json({ message: 'IDs array is required' });
-            }
-            await settlementService.bulkDelete(ids);
             res.status(204).send();
         } catch (error) {
             next(error);
@@ -249,8 +210,8 @@ export class SettlementController {
             if (newBatchNumber) updates.batchNumber = newBatchNumber;
             if (newSettlementDate) updates.settlementDate = new Date(newSettlementDate);
 
-            const result = await settlementService.updateBatch(batchNumber, updates);
-            res.json({ message: 'تم التحديث بنجاح', count: result.count });
+            const result = await settlementService.updateBatch(batchNumber, { newBatchNumber, newSettlementDate });
+            res.json({ message: 'تم التحديث بنجاح', count: result.updatedCount });
         } catch (error) {
             next(error);
         }
