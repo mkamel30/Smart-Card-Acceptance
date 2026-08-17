@@ -36,8 +36,7 @@ export class OCRService {
             console.log('OCR: Initializing persistent Tesseract Worker...');
             const worker = await Tesseract.createWorker(['eng', 'ara']);
             await worker.setParameters({
-                tessedit_char_whitelist: '0123456789.:-/,ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzابتثجحخدذرزسشصضطظعغفقكلمنهويي*# ',
-                tessedit_pagesegmode: '3' as any
+                tessedit_pagesegmode: '4' as any // Single column of variable text sizes - optimal for thermal POS
             });
             this.worker = worker;
             return worker;
@@ -86,12 +85,13 @@ export class OCRService {
             throw new Error('Invalid or too small image');
         }
 
-        // Image pre-processing: Resize, Grayscale, Sharpen, Normalize contrast
+        // Image pre-processing: High clarity and contrast for thermal dot-matrix numbers
         const processedBuffer = await image
-            .resize({ width: 2000, withoutEnlargement: true })
+            .resize({ width: 2400, withoutEnlargement: true })
             .grayscale()
             .normalize()
-            .sharpen()
+            .linear(1.3, -12) // Enhance ink contrast
+            .sharpen({ sigma: 1.2 })
             .toFormat('png')
             .toBuffer();
 
@@ -138,9 +138,8 @@ export class OCRService {
 
     private parseReceiptText(text: string): ExtractedReceiptData {
         const data: ExtractedReceiptData = {};
-        // Replace visual noise
-        const cleanText = text.replace(/[\r\n]+/g, '\n').replace(/[I|l|i](?=\d)/g, '1');
-        // Compact numbers with spaces e.g. "09 / 08 / 2026"
+        // Replace visual noise and normalize line breaks
+        const cleanText = text.replace(/[\r\n]+/g, '\n');
         const digitFocusText = cleanText.replace(/(\d)\s+(?=\d|[.,/:\-]\d)/g, '$1');
 
         // 1. AMOUNT (Settled Amount - without fees)
@@ -163,22 +162,35 @@ export class OCRService {
             }
         }
 
-        // 2. BATCH NUMBER (Strict & Flexible)
-        // e.g. "BATCH NO.000085" or "BATCH NO: 000085" or "BATCH: 000085" or "BATCH 000085"
-        const batchMatch = digitFocusText.match(/BATCH[^\d\n\r]{0,15}(\d{4,6})/i);
-        if (batchMatch) {
-            data.batchNumber = batchMatch[1].padStart(6, '0');
+        // 2. BATCH NUMBER (Resilient matching for O/0 and I/1)
+        // e.g. "BATCH NO.000085", "BATCH NO: 000085", "BATCH: 000085", "BATCH OOOO85"
+        const batchLine = cleanText.match(/BATCH[^\n\r]{0,30}/i);
+        if (batchLine) {
+            const normalized = batchLine[0]
+                .replace(/[OoD]/g, '0')
+                .replace(/[Il|!\]\[]/g, '1');
+            const num = normalized.match(/(\d{4,6})/);
+            if (num) {
+                data.batchNumber = num[1].padStart(6, '0');
+            }
         }
 
         // 3. APPROVAL NUMBER (AUTH CODE / APPROVAL)
-        // e.g. "AUTH CODE:215757" or "AUTH CODE: 215757" or "AUTH: 215757" or "APPROVAL: 215757"
-        const authMatch = digitFocusText.match(/(?:AUTH|APPR|APPROVAL|APPROV|موافقة|الموافقة)[^\d\n\r]{0,15}(\d{4,8})/i);
-        if (authMatch) {
-            data.approvalNumber = authMatch[1];
+        // e.g. "AUTH CODE:215757", "AUTH CODE: 215757", "AUTH: 215757", "APPROVAL: 215757"
+        const authLine = cleanText.match(/(?:AUTH\s*CODE|AUTH|APPROVAL|APPROV|APPR|موافقة|الموافقة)[^\n\r]{0,30}/i);
+        if (authLine) {
+            const normalized = authLine[0]
+                .replace(/[OoD]/g, '0')
+                .replace(/[Il|!\]\[]/g, '1')
+                .replace(/[Ss]/g, '5');
+            const num = normalized.match(/(\d{4,8})/);
+            if (num) {
+                data.approvalNumber = num[1];
+            }
         }
 
         // 4. CARD PAN (First 6 BIN & Last 4 Digits)
-        // e.g. "422322******8150" or "422322......8150" or "422322XXXXXX8150"
+        // e.g. "422322******8150", "422322......8150", "422322XXXXXX8150"
         const panMatch = digitFocusText.match(/\b([459]\d{5})[^\d\n\r]{2,14}(\d{4})\b/);
         if (panMatch) {
             data.cardBin = panMatch[1];
@@ -194,20 +206,25 @@ export class OCRService {
         }
 
         // 5. DATE & TIME
-        // e.g. "DATE:09/08/2026" or "09/08/2026" or "09-08-2026"
-        const dateMatch = digitFocusText.match(/\b([0-3]?\d)[\/\-\.]([0-1]?\d)[\/\-\.]((?:20)?\d{2})\b/);
+        // e.g. "DATE:09/08/2026", "09/08/2026", "DATE: O9/O8/2026"
+        const dateMatch = cleanText.match(/(?:DATE|التاريخ)?[^\n\r]{0,10}\b([0-3]?[0-9Oo][/\-\.][0-1]?[0-9Oo][/\-\.](?:20)?[0-9Oo]{2})\b/i);
         if (dateMatch) {
-            const day = dateMatch[1].padStart(2, '0');
-            const month = dateMatch[2].padStart(2, '0');
-            let year = dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3];
-            if (year === '2076') year = '2026';
-            data.date = `${year}-${month}-${day}`;
+            const cleanedDateStr = dateMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1');
+            const parts = cleanedDateStr.split(/[/\-\.]/);
+            if (parts.length === 3) {
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                let year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+                if (year === '2076') year = '2026';
+                data.date = `${year}-${month}-${day}`;
+            }
         }
 
-        // e.g. "TIME:09:58:59" or "09:58:59"
-        const timeMatch = digitFocusText.match(/\b([0-2]?\d:[0-5]\d(?::[0-5]\d)?)\b/);
+        // e.g. "TIME:09:58:59", "09:58:59", "TIME: O9:58:59"
+        const timeMatch = cleanText.match(/(?:TIME|الوقت)?[^\n\r]{0,10}\b([0-2]?[0-9Oo]:[0-5][0-9Oo](?::[0-5][0-9Oo])?)\b/i);
         if (timeMatch) {
-            data.time = timeMatch[1].length === 5 ? `${timeMatch[1]}:00` : timeMatch[1];
+            const cleanedTimeStr = timeMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1');
+            data.time = cleanedTimeStr.length === 5 ? `${cleanedTimeStr}:00` : cleanedTimeStr;
         }
 
         return data;
