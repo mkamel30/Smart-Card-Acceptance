@@ -155,7 +155,7 @@ export default function BranchStats() {
                                 لا توجد بيانات
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <LineChart data={charts.trend}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                                     <XAxis
@@ -198,7 +198,7 @@ export default function BranchStats() {
                                     لا توجد بيانات
                                 </div>
                             ) : (
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <PieChart>
                                         <Pie
                                             data={summary.statusBreakdown}

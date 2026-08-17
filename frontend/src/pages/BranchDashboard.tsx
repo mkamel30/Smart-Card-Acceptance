@@ -49,14 +49,15 @@ export default function BranchDashboard() {
 
     const fetchBranches = async () => {
         try {
-            const res = await api.get('/branches');
+            const res = await api.get('/branches?limit=100');
+            const branchList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
             const availableBranches = isAdmin
-                ? res.data
-                : res.data.filter((b: any) => user?.branches?.some(ub => ub.id === b.id));
+                ? branchList
+                : branchList.filter((b: any) => user?.branches?.some(ub => ub.id === b.id));
 
             setBranches(availableBranches.map((b: any) => ({ value: b.id, label: b.name })));
         } catch (err) {
-            console.error('Failed to fetch branches');
+            console.error('Failed to fetch branches', err);
         }
     };
 
@@ -494,7 +495,7 @@ export default function BranchDashboard() {
                                 لا توجد بيانات
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <LineChart data={charts?.trend || []}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                                     <XAxis
@@ -540,7 +541,7 @@ export default function BranchDashboard() {
                                     لا توجد بيانات
                                 </div>
                             ) : (
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <PieChart>
                                         <Pie
                                             data={summary?.statusBreakdown || []}
@@ -579,7 +580,7 @@ export default function BranchDashboard() {
                                 لا توجد بيانات
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <BarChart data={charts?.byBranch || []} layout="vertical">
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
                                     <XAxis type="number" hide />
@@ -618,7 +619,7 @@ export default function BranchDashboard() {
                                 لا توجد بيانات
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <BarChart data={charts?.byBank || []}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                                     <XAxis
