@@ -33,11 +33,10 @@ export class OCRService {
         if (this.workerPromise) return this.workerPromise;
 
         this.workerPromise = (async () => {
-            console.log('OCR: Initializing persistent English Tesseract Worker...');
-            // Strictly 'eng' to prevent Arabic RTL engine from mangling English numbers/dates
-            const worker = await Tesseract.createWorker('eng');
+            console.log('OCR: Initializing persistent Tesseract Worker (eng+ara)...');
+            const worker = await Tesseract.createWorker(['eng', 'ara']);
             await worker.setParameters({
-                tessedit_pagesegmode: '3' as any // Fully automatic page segmentation (handles 2-column receipt layouts)
+                tessedit_pagesegmode: '4' as any // Assume single column of variable-size text
             });
             this.worker = worker;
             return worker;
@@ -87,13 +86,13 @@ export class OCRService {
             throw new Error('Invalid or too small image');
         }
 
-        // Image pre-processing: High-res, binarize, sharpen for tiny dot-matrix text
+        // Image pre-processing: Auto-rotate, high-res, grayscale, normalize, sharpen
+        // NO threshold - it destroys thin dot-matrix strokes on thermal receipts
         const processedBuffer = await image
             .rotate()
-            .resize({ width: 3000, withoutEnlargement: true })
+            .resize({ width: 2500, withoutEnlargement: true })
             .grayscale()
             .normalize()
-            .threshold(140) // Binarize: convert gray pixels to pure black/white
             .sharpen()
             .toFormat('png')
             .toBuffer();
