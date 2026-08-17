@@ -301,25 +301,25 @@ export default function SettlementWorkFlow() {
     };
 
     const onSubmit = async (data: SettlementFormValues) => {
+        // Clean data and default fields
+        const payload: any = {
+            ...data,
+            totalAmount: data.settledAmount, // Sync if empty
+            netAmount: data.settledAmount,
+            referenceNumber: data.referenceNumber || `REF-${Date.now()}`,
+            branchId: localStorage.getItem('selectedBranchId') || undefined, // Attach Branch ID
+            receiptImageUrl: receiptImageUrl || undefined,
+        };
+
+        // Clean empty strings to undefined to make Zod treat them as optional
+        const cleanedPayload = Object.fromEntries(
+            Object.entries(payload).map(([key, value]) => [
+                key,
+                value === "" ? undefined : value
+            ])
+        );
+
         try {
-            // Clean data and default fields
-            const payload: any = {
-                ...data,
-                totalAmount: data.settledAmount, // Sync if empty
-                netAmount: data.settledAmount,
-                referenceNumber: data.referenceNumber || `REF-${Date.now()}`,
-                branchId: localStorage.getItem('selectedBranchId') || undefined, // Attach Branch ID
-                receiptImageUrl: receiptImageUrl || undefined,
-            };
-
-            // Clean empty strings to undefined to make Zod treat them as optional
-            const cleanedPayload = Object.fromEntries(
-                Object.entries(payload).map(([key, value]) => [
-                    key,
-                    value === "" ? undefined : value
-                ])
-            );
-
             await api.post('/settlements', cleanedPayload);
             alert('تم حفظ الإيصال بنجاح');
             // Full reset to default values
