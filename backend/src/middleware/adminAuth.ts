@@ -17,6 +17,7 @@ const adminRateLimit = rateLimit({
     message: 'Too many admin attempts, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false,
 });
 
 export interface AuthRequest extends Request {

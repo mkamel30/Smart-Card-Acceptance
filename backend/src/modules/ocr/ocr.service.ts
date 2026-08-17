@@ -37,7 +37,7 @@ export class OCRService {
             // Strictly 'eng' to prevent Arabic RTL engine from mangling English numbers/dates
             const worker = await Tesseract.createWorker('eng');
             await worker.setParameters({
-                tessedit_pagesegmode: '6' as any // Assume a single uniform block of text
+                tessedit_pagesegmode: '3' as any // Fully automatic page segmentation (handles 2-column receipt layouts)
             });
             this.worker = worker;
             return worker;
@@ -87,12 +87,13 @@ export class OCRService {
             throw new Error('Invalid or too small image');
         }
 
-        // Image pre-processing: Auto-rotate EXIF, Grayscale, Normalize, Sharpen
+        // Image pre-processing: High-res, binarize, sharpen for tiny dot-matrix text
         const processedBuffer = await image
             .rotate()
-            .resize({ width: 2200, withoutEnlargement: true })
+            .resize({ width: 3000, withoutEnlargement: true })
             .grayscale()
             .normalize()
+            .threshold(140) // Binarize: convert gray pixels to pure black/white
             .sharpen()
             .toFormat('png')
             .toBuffer();

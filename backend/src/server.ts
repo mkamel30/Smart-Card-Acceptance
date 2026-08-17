@@ -10,8 +10,8 @@ import { prisma } from './config/database';
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Trust proxy for Render/Vercel/Cloudflare (fixes X-Forwarded-For rate limit error)
-app.set('trust proxy', true);
+// Trust proxy for Render (1 = trust first proxy only)
+app.set('trust proxy', 1);
 
 // Rate limiting configuration
 const limiter = rateLimit({
@@ -20,6 +20,7 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false,
 });
 
 // Security middleware
