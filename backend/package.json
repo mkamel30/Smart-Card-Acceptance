@@ -8,7 +8,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "db:backup": "node scripts/export_database_backup.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
