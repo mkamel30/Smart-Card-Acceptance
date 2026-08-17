@@ -6,30 +6,37 @@ const FEE_RATE = 0.0115; // 1.15%
 
 // Service to handle settlement business logic
 export class SettlementService {
-    async findExistingDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string) {
+    async findExistingDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string, branchId?: string) {
         if (!approvalNumber || !last4Digits || !batchNumber) return null;
 
+        const where: any = {
+            approvalNumber,
+            last4Digits,
+            batchNumber,
+            status: { not: 'REJECTED' } // Allow retry if previous attempt was rejected
+        };
+
+        if (branchId) {
+            where.branchId = branchId;
+        }
+
         return await prisma.settlement.findFirst({
-            where: {
-                approvalNumber,
-                last4Digits,
-                batchNumber,
-                status: { not: 'REJECTED' } // Allow retry if previous attempt was rejected
-            }
+            where
         });
     }
 
-    async checkDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string) {
-        const existing = await this.findExistingDuplicate(approvalNumber, last4Digits, batchNumber);
+    async checkDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string, branchId?: string) {
+        const existing = await this.findExistingDuplicate(approvalNumber, last4Digits, batchNumber, branchId);
         return !!existing;
     }
 
     async createSettlement(data: CreateSettlementInput, userId: string = 'system') {
-        // Validation: Prevent duplicate transactions in the same batch
+        // Validation: Prevent duplicate transactions in the same batch for this branch
         const isDuplicate = await this.checkDuplicate(
             data.approvalNumber || '',
             data.last4Digits || '',
-            data.batchNumber || ''
+            data.batchNumber || '',
+            data.branchId
         );
 
         if (isDuplicate) {

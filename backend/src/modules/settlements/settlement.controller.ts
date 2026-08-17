@@ -9,11 +9,12 @@ export class SettlementController {
         try {
             const validatedData = CreateSettlementSchema.parse(req.body);
 
-            // Duplicate Check
+            // Duplicate Check (scoped to the branch)
             const existing = await settlementService.findExistingDuplicate(
                 validatedData.approvalNumber || '',
                 validatedData.last4Digits || '',
-                validatedData.batchNumber || ''
+                validatedData.batchNumber || '',
+                validatedData.branchId
             );
 
             if (existing) {
