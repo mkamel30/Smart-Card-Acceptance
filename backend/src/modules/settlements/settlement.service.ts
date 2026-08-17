@@ -6,10 +6,10 @@ const FEE_RATE = 0.0115; // 1.15%
 
 // Service to handle settlement business logic
 export class SettlementService {
-    async checkDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string) {
-        if (!approvalNumber || !last4Digits || !batchNumber) return false;
+    async findExistingDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string) {
+        if (!approvalNumber || !last4Digits || !batchNumber) return null;
 
-        const existing = await prisma.settlement.findFirst({
+        return await prisma.settlement.findFirst({
             where: {
                 approvalNumber,
                 last4Digits,
@@ -17,7 +17,10 @@ export class SettlementService {
                 status: { not: 'REJECTED' } // Allow retry if previous attempt was rejected
             }
         });
+    }
 
+    async checkDuplicate(approvalNumber: string, last4Digits: string, batchNumber: string) {
+        const existing = await this.findExistingDuplicate(approvalNumber, last4Digits, batchNumber);
         return !!existing;
     }
 

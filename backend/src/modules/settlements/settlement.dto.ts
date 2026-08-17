@@ -70,6 +70,8 @@ export const CreateSettlementSchema = z.object({
     receiptImageUrl: z.string()
         .url('Receipt image URL must be valid')
         .optional(),
+    overwrite: z.boolean().optional(),
+    allowUpdate: z.boolean().optional(),
 });
 
 export const UpdateSettlementSchema = CreateSettlementSchema.partial();

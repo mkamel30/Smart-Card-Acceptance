@@ -10,16 +10,39 @@ export class SettlementController {
             const validatedData = CreateSettlementSchema.parse(req.body);
 
             // Duplicate Check
-            const isDuplicate = await settlementService.checkDuplicate(
+            const existing = await settlementService.findExistingDuplicate(
                 validatedData.approvalNumber || '',
                 validatedData.last4Digits || '',
                 validatedData.batchNumber || ''
             );
 
-            if (isDuplicate) {
-                return res.status(400).json({
+            if (existing) {
+                if (existing.status === 'SETTLED') {
+                    return res.status(400).json({
+                        error: 'Duplicate Settled Transaction',
+                        message: `تمت تسوية هذه المعاملة مسبقاً في الباتش ${validatedData.batchNumber} ولا يمكن تعديلها بعد إغلاق الباتش.`,
+                        isSettled: true
+                    });
+                }
+
+                // If overwrite requested, update the existing settlement
+                if (req.body.overwrite || req.body.allowUpdate) {
+                    const updated = await settlementService.updateSettlement(existing.id, validatedData);
+                    return res.status(200).json({
+                        ...updated,
+                        isUpdated: true,
+                        message: 'تم تحديث بيانات المعاملة السابقة بنجاح'
+                    });
+                }
+
+                return res.status(409).json({
                     error: 'Duplicate Transaction',
-                    message: `تم رفض المعاملة لأنها مسجلة مسبقاً (رقم الموافقة: ${validatedData.approvalNumber}، آخر 4 أرقام: ${validatedData.last4Digits}، رقم الباتش: ${validatedData.batchNumber})`
+                    canUpdate: true,
+                    existingId: existing.id,
+                    existingAmount: existing.settledAmount,
+                    existingDate: existing.settlementDate,
+                    existingMerchantName: existing.merchantName,
+                    message: `المعاملة مسجلة مسبقاً في الباتش الحالي (${existing.batchNumber}) بمبلغ (${Number(existing.settledAmount).toLocaleString()} ج.م).`
                 });
             }
 

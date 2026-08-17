@@ -341,6 +341,48 @@ export default function SettlementWorkFlow() {
             fetchRecent();
         } catch (err: any) {
             console.error('Save settlement error:', err);
+
+            // Check if duplicate transaction in unsettled batch can be updated
+            if (err.response?.data?.canUpdate && err.response?.data?.existingId) {
+                const existingAmount = Number(err.response.data.existingAmount || 0).toLocaleString();
+                const existingDate = err.response.data.existingDate
+                    ? new Date(err.response.data.existingDate).toLocaleDateString('ar-EG')
+                    : '';
+                const promptMsg = `تنبيه: هذه المعاملة مسجلة مسبقاً في هذا الباتش!\n` +
+                    `• المبلغ المسجل سابقاً: ${existingAmount} ج.م\n` +
+                    `• التاريخ: ${existingDate}\n\n` +
+                    `هل ترغب في استبدالها وتحديث بياناتها بالبيانات الجديدة التي أدخلتها الآن؟`;
+
+                if (confirm(promptMsg)) {
+                    try {
+                        await api.put(`/settlements/${err.response.data.existingId}`, cleanedPayload);
+                        alert('تم تحديث بيانات المعاملة السابقة بنجاح!');
+                        reset({
+                            settlementDate: new Date().toISOString().slice(0, 16),
+                            serviceCategory: 'SMART',
+                            bankName: 'BANQUE MISR',
+                            fees: 0,
+                            merchantCode: '',
+                            merchantName: '',
+                            subService: '',
+                            settledAmount: 0,
+                            approvalNumber: '',
+                            batchNumber: '',
+                            last4Digits: '',
+                            referenceNumber: '',
+                        });
+                        setReceiptImageUrl('');
+                        fetchRecent();
+                        return;
+                    } catch (updateErr: any) {
+                        alert(updateErr.response?.data?.message || 'فشل تحديث المعاملة السابقة');
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            }
+
             const errMsg = err.response?.data?.message || 'خطأ أثناء الحفظ';
             const details = err.response?.data?.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('\n') || '';
             alert(details ? `${errMsg}:\n${details}` : errMsg);
